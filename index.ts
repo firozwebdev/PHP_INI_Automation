@@ -29,13 +29,16 @@ const EXTENSIONS = [
  */
 async function updatePhpIni(version) {
     const sourceIni = path.join(PHP_DIRECTORY, 'php.ini');
-    const extensionDir = `${process.env.MY_PATH}/php/${version}/ext`;  // Dynamic path based on version
+    
+    // Check if MY_PATH is set and not empty
+    const myPath = process.env.MY_PATH;
+    const updateExtensionDir = myPath && myPath.trim() !== ""; // Determine if we should update extension_dir
 
     try {
         validateSourceFile(sourceIni);
         console.log(`Customizing php.ini for PHP ${version}...`);
         
-        await customizePhpIni(sourceIni, extensionDir);
+        await customizePhpIni(sourceIni, version, updateExtensionDir, myPath);
         
         console.log(`php.ini for PHP ${version} has been customized successfully!`);
     } catch (error) {
@@ -59,17 +62,22 @@ function validateSourceFile(filePath) {
  * Customizes the php.ini file by enabling extensions and setting the extension directory.
  *
  * @param {string} filePath - Path to the php.ini file to be customized.
- * @param {string} extensionDir - The directory where PHP extensions are located.
+ * @param {string} version - The PHP version for the extensions.
+ * @param {boolean} updateExtensionDir - Flag to determine if extension_dir should be updated.
+ * @param {string} myPath - The path for the extensions directory.
  */
-async function customizePhpIni(filePath, extensionDir) {
+async function customizePhpIni(filePath, version, updateExtensionDir, myPath) {
     try {
         let content = await fs.readFile(filePath, 'utf8');
 
-        // Apply changes to extension_dir and enable necessary extensions
-        content = content.replace(
-            /;extension_dir\s*=\s*".\/"/g, 
-            `extension_dir = "${extensionDir}"`
-        );
+        // Only update extension_dir if MY_PATH is set
+        if (updateExtensionDir) {
+            const extensionDir = `${myPath}/php/${version}/ext`;
+            content = content.replace(
+                /;extension_dir\s*=\s*".\/"/g, 
+                `extension_dir = "${extensionDir}"`
+            );
+        }
 
         // Enable extensions dynamically based on the EXTENSIONS array
         EXTENSIONS.forEach(extension => {
