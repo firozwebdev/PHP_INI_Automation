@@ -1,4 +1,4 @@
-# ini-automation
+# PHP INI Automation
 
 To install dependencies:
 
@@ -9,7 +9,7 @@ bun install
 To run:
 
 ```bash
-bun run index.ts
+bun start
 ```
 
 This project was created using `bun init` in bun v1.1.37. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
