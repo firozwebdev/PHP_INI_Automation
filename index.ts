@@ -29,7 +29,7 @@ const EXTENSIONS = [
  */
 async function updatePhpIni(version) {
     const sourceIni = path.join(PHP_DIRECTORY, 'php.ini');
-    const extensionDir = `C:/Users/Sabuz/pvm/php/${version}/ext`;  // Dynamic path based on version
+    const extensionDir = `${process.env.MY_PATH}/php/${version}/ext`;  // Dynamic path based on version
 
     try {
         validateSourceFile(sourceIni);
