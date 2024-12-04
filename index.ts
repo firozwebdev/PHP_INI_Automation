@@ -1,9 +1,8 @@
 import fs from 'fs-extra';
 import path from 'path';
-const { exec } = require('child_process');
 
 // Constants
-const DEFAULT_PATH = "C:\\php"; // Default PHP directory if PVM_PATH is not set
+const DEFAULT_PATH = "C:/php"; // Default PHP directory if PVM_PATH is not set
 
 const EXTENSIONS = [
     'curl',
@@ -24,28 +23,31 @@ const EXTENSIONS = [
 /**
  * Updates the php.ini configuration for the specified PHP version.
  *
- * @param {string} version - The PHP version to update for (default: 'default').
+ * @param {string} version - The PHP version to update for (default: '').
  */
-async function updatePhpIni(version='') {
-    console.log(`Starting php.ini update for PHP version: ${version}`);
+async function updatePhpIni(version = '') {
+    console.log(`Starting php.ini update for PHP version: ${version || 'default'}`);
 
     // Determine the base path and paths for ini file and extensions
     const PVM_PATH = process.env.PVM_PATH || ''; // Path to PVM or empty if not set
     const basePath = PVM_PATH || DEFAULT_PATH;
-    const iniPath = PVM_PATH ? path.join(basePath, 'sym', 'php.ini') : path.join(basePath, 'php.ini');
-    
 
-    const extension_dir = version ? path.join(basePath, 'php', version, 'ext') : '';
-    
+    const iniPath = version 
+        ? path.join(basePath, 'sym', 'php.ini') 
+        : path.join(DEFAULT_PATH, 'php.ini');
+        
+    const extension_dir = version 
+        ? path.join(basePath, 'php', version, 'ext') 
+        : '';
 
-    console.log(`Resolved php.ini path: ${iniPath}`);
-    console.log(`Resolved extensions directory: ${extension_dir}`);
-    
+    console.log(`php.ini path: ${iniPath}`);
+    console.log(`Extensions directory: ${extension_dir || 'Not specified'}`);
+
     try {
         validateSourceFile(iniPath); // Validate if the file exists
         await customizePhpIni(iniPath, extension_dir);
 
-        console.log(`php.ini for PHP version ${version} has been successfully customized!`);
+        console.log(`php.ini for PHP version ${version || 'default'} has been successfully customized!`);
     } catch (error) {
         console.error("Failed to update php.ini:", error.message);
     }
@@ -70,6 +72,7 @@ function validateSourceFile(filePath) {
  * @param {string} extensionsDir - Directory containing PHP extensions.
  */
 async function customizePhpIni(filePath, extensionsDir) {
+    console.log(`Customizing php.ini at: ${filePath}`);
     try {
         let content = await fs.readFile(filePath, 'utf8');
 
@@ -95,9 +98,9 @@ async function customizePhpIni(filePath, extensionsDir) {
 }
 
 // Command-line arguments
-const phpVersion = process.argv[2]; // Use default PHP version if none is provided
+const phpVersion = process.argv[2] || ''; // Use default PHP version if none is provided
 
-console.log(`PHP Version specified: ${phpVersion}`);
+console.log(`PHP Version specified: ${phpVersion || 'default'}`);
 
 // Execute the update
 updatePhpIni(phpVersion);
