@@ -2,50 +2,59 @@ import fs from 'fs-extra';
 import path from 'path';
 
 // Constants
-const DEFAULT_PATH = "C:/php"; // Default PHP directory if PVM_PATH is not set
+const DEFAULT_PATH = process.env.DEFAULT_PATH; // Default PHP directory if none is set
 
-const EXTENSIONS = [
-    'curl',
-    'sqlite3',
-    'openssl',
-    'pdo_mysql',
-    'mbstring',
-    'tokenizer',
-    'json',
-    'fileinfo',
-    'ctype',
-    'xml',
-    'bcmath',
-    'gd',
-    'zip',
-];
+/**
+ * Determines the appropriate paths for php.ini and extensions directory.
+ *
+ * @param {string} version - PHP version (optional).
+ * @returns {object} - Paths for php.ini and extensions directory.
+ * @throws {Error} - If no valid PHP environment is found.
+ */
+function determinePhpIniPaths(version = '') {
+    let iniPath = '';
+    let extensionDir = '';
+
+    if (process.env.PVM_PATH) {
+        iniPath = path.join(process.env.PVM_PATH, 'sym', 'php.ini');
+        extensionDir = path.join(process.env.PVM_PATH, 'php', version || 'version', 'ext');
+    } else if (process.env.LARAGON_PATH) {
+        iniPath = path.join(process.env.LARAGON_PATH, 'php', version, 'php.ini');
+        extensionDir = path.join(process.env.LARAGON_PATH, 'php', version, 'ext');
+    } else if (process.env.XAMPP_PATH) {
+        iniPath = path.join(process.env.XAMPP_PATH, 'php.ini');
+        extensionDir = 'path.join(process.env.XAMPP_PATH, 'ext')';
+    } else if (process.env.WAMP_PATH) {
+        iniPath = path.join(process.env.WAMP_PATH, 'php', version, 'php.ini');
+        extensionDir = path.join(process.env.WAMP_PATH, 'php', version, 'ext');
+    } else {
+        iniPath = path.join(DEFAULT_PATH, 'php.ini');
+        extensionDir = '';
+    }
+
+    if (!fs.existsSync(iniPath)) {
+        throw new Error('No valid PHP environment found. Please check your configurations.');
+    }
+
+    return { iniPath, extensionDir };
+}
 
 /**
  * Updates the php.ini configuration for the specified PHP version.
  *
- * @param {string} version - The PHP version to update for (default: '').
+ * @param {string} version - PHP version to update for (default: '').
  */
 async function updatePhpIni(version = '') {
     console.log(`Starting php.ini update for PHP version: ${version || 'default'}`);
 
-    // Determine the base path and paths for ini file and extensions
-    const PVM_PATH = process.env.PVM_PATH || ''; // Path to PVM or empty if not set
-    const basePath = PVM_PATH || DEFAULT_PATH;
-
-    const iniPath = version 
-        ? path.join(basePath, 'sym', 'php.ini') 
-        : path.join(DEFAULT_PATH, 'php.ini');
-        
-    const extension_dir = version 
-        ? path.join(basePath, 'php', version, 'ext') 
-        : '';
-
-    console.log(`php.ini path: ${iniPath}`);
-    console.log(`Extensions directory: ${extension_dir || 'Not specified'}`);
-
     try {
+        const { iniPath, extensionDir } = determinePhpIniPaths(version);
+
+        console.log(`php.ini path: ${iniPath}`);
+        console.log(`Extensions directory: ${extensionDir}`);
+
         validateSourceFile(iniPath); // Validate if the file exists
-        await customizePhpIni(iniPath, extension_dir);
+        await customizePhpIni(iniPath, extensionDir);
 
         console.log(`php.ini for PHP version ${version || 'default'} has been successfully customized!`);
     } catch (error) {
@@ -56,8 +65,8 @@ async function updatePhpIni(version = '') {
 /**
  * Validates that the source php.ini file exists.
  *
- * @param {string} filePath - Path to the php.ini template.
- * @throws {Error} If the file does not exist.
+ * @param {string} filePath - Path to the php.ini file.
+ * @throws {Error} - If the file does not exist.
  */
 function validateSourceFile(filePath) {
     if (!fs.existsSync(filePath)) {
@@ -73,14 +82,30 @@ function validateSourceFile(filePath) {
  */
 async function customizePhpIni(filePath, extensionsDir) {
     console.log(`Customizing php.ini at: ${filePath}`);
+    const EXTENSIONS = [
+        'curl',
+        'sqlite3',
+        'openssl',
+        'pdo_mysql',
+        'mbstring',
+        'tokenizer',
+        'json',
+        'fileinfo',
+        'ctype',
+        'xml',
+        'bcmath',
+        'gd',
+        'zip',
+    ];
+
     try {
         let content = await fs.readFile(filePath, 'utf8');
 
         // Update extension_dir only if a custom directory is provided
         if (extensionsDir) {
             content = content.replace(
-                /;extension_dir\s*=\s*".\/"/,
-                `extension_dir = "${extensionsDir.replace(/\\/g, '\\\\')}"` // Escape backslashes for Windows
+                /;?extension_dir\s*=\s*".*?"/,
+                `extension_dir = "${extensionsDir.replace(/\\/g, '\\\\')}"`
             );
         }
 
@@ -104,15 +129,3 @@ console.log(`PHP Version specified: ${phpVersion || 'default'}`);
 
 // Execute the update
 updatePhpIni(phpVersion);
-
-
-/*
-Command: 
-bun start PHP-7.2.0
-bun start PHP-7.4.33
-bun start PHP-8.1.10
-bun start PHP-8.1.10
-bun start PHP-8.2.24
-bun start PHP-8.3.12
-
-*/
