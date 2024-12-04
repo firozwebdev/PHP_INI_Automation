@@ -23,7 +23,7 @@ function determinePhpIniPaths(version = '') {
         extensionDir = path.join(process.env.LARAGON_PATH, 'php', version, 'ext');
     } else if (process.env.XAMPP_PATH) {
         iniPath = path.join(process.env.XAMPP_PATH, 'php.ini');
-        extensionDir = 'path.join(process.env.XAMPP_PATH, 'ext')';
+        extensionDir = path.join(process.env.XAMPP_PATH, 'ext');
     } else if (process.env.WAMP_PATH) {
         iniPath = path.join(process.env.WAMP_PATH, 'php', version, 'php.ini');
         extensionDir = path.join(process.env.WAMP_PATH, 'php', version, 'ext');
