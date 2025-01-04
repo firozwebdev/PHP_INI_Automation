@@ -63,6 +63,7 @@ export async function customizePhpIni(filePath, extensionsDir, customSettings = 
     // Laravel wants these extensions enabled
     const EXTENSIONS = [
         'curl',
+        'pdo_sqlite',
         'sqlite3',
         'openssl',
         'pdo_mysql',
@@ -75,12 +76,15 @@ export async function customizePhpIni(filePath, extensionsDir, customSettings = 
         'bcmath',
         'gd',
         'zip',
+        
     ];
 
     // Service-specific settings
     const DEFAULT_SETTINGS = {
-        //max_execution_time: 120,
-        memory_limit: '1024',
+        max_execution_time: 120,
+        memory_limit: '512M',
+        output_buffering:'Off',
+        zlib_output_compression: 'Off',
         //post_max_size: '50M',
         //upload_max_filesize: '50M',
         // short_open_tag: 'On',
