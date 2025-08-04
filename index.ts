@@ -13,6 +13,7 @@ import { promisify } from "util";
 
 import fs from "fs-extra";
 import path from "path";
+import { EnhancedExtensionManager } from "./enhanced-extension-manager.js";
 import { IntelligentPresetManager } from "./intelligent-preset-manager.js";
 import { detectAllPhpEnvironments } from "./phpEnvironmentUtils.js";
 import {
@@ -23,6 +24,7 @@ import {
   listPhpIniBackups,
   restorePhpIniBackup,
 } from "./phpIniManager.js";
+import { UnifiedConfigurationManager } from "./unified-configuration-manager.js";
 
 const execAsync = promisify(exec);
 
@@ -875,11 +877,23 @@ async function cleanBackups(environment: any) {
 
 // CLI Commands
 
-// Smart Preset mode (NEW - default command)
+// Unified Configuration Manager (NEW - default command)
+program
+  .command("config")
+  .alias("c")
+  .description(
+    "🚀 Unified configuration manager - Choose preset or manual mode"
+  )
+  .action(async () => {
+    const manager = new UnifiedConfigurationManager();
+    await manager.run();
+  });
+
+// Smart Preset mode
 program
   .command("smart")
   .alias("s")
-  .description("🧠 Smart framework detection and configuration (default)")
+  .description("🧠 Smart framework detection and configuration")
   .action(async () => {
     const manager = new IntelligentPresetManager();
     await manager.run();
@@ -1016,41 +1030,11 @@ program
 program
   .command("extensions")
   .alias("ext")
-  .description("🧩 Manage PHP extensions")
+  .description("🧩 Enhanced extension management with detailed information")
   .option("-v, --version <version>", "PHP version to configure")
   .action(async (options) => {
-    displayBanner();
-
-    try {
-      const environments = await detectPhpEnvironments();
-
-      if (environments.length === 0) {
-        console.log(chalk.red("❌ No PHP environments found."));
-        process.exit(1);
-      }
-
-      let selectedEnv;
-      if (options.version) {
-        selectedEnv = environments.find(
-          (env) => env.version === options.version
-        );
-        if (!selectedEnv) {
-          console.log(
-            chalk.red(`❌ PHP version ${options.version} not found.`)
-          );
-          process.exit(1);
-        }
-      } else {
-        selectedEnv =
-          environments.find((env) => env.status === "active") ||
-          environments[0];
-      }
-
-      await manageExtensions(selectedEnv);
-    } catch (error) {
-      console.error(chalk.red.bold("\n❌ Error:"), chalk.red(error.message));
-      process.exit(1);
-    }
+    const manager = new EnhancedExtensionManager();
+    await manager.run();
   });
 
 program
@@ -1092,9 +1076,9 @@ program
     }
   });
 
-// Default action (smart preset mode)
+// Default action (unified configuration manager)
 if (process.argv.length === 2) {
-  const manager = new IntelligentPresetManager();
+  const manager = new UnifiedConfigurationManager();
   manager.run();
 } else {
   program.parse();
