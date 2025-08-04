@@ -1,8 +1,10 @@
-# 🚀 PHP INI Automation Pro
+# 🚀 PHP INI Automation Pro v3.0
 
-**The Ultimate Professional CLI Tool for PHP Configuration Management**
+**The Most Intelligent & User-Friendly PHP Configuration Tool Ever Created**
 
-A robust, user-friendly command-line interface that automatically detects PHP installations and provides comprehensive INI file management with beautiful visual feedback and unbeatable functionality.
+🧠 **Smart Framework Detection** • 🎯 **One-Click Presets** • 🛡️ **100% Safe** • ⚡ **Lightning Fast**
+
+A revolutionary CLI tool that automatically detects your framework (Laravel, WordPress, Symfony, etc.) and applies optimized PHP configurations with zero technical knowledge required.
 
 ```
 ██████╗ ██╗  ██╗██████╗     ██║████╗  ██║██║    ██████╗ ██████╗  ██████╗
@@ -13,17 +15,36 @@ A robust, user-friendly command-line interface that automatically detects PHP in
 ╚═╝     ╚═╝  ╚═╝╚═╝         ╚═╝╚═╝       ╚═╝    ╚═╝     ╚═╝  ╚═╝ ╚═════╝
 ```
 
-## ✨ Features
+## 🧠 Revolutionary Smart Features
 
-🔍 **Smart Auto-Detection**: Automatically finds PHP installations from PVM, Laragon, XAMPP, WAMP, and custom paths
-🎨 **Beautiful CLI Interface**: Stunning visual feedback with colors, tables, and progress indicators
-🧩 **Extension Management**: Enable/disable 50+ PHP extensions with detailed descriptions
-💾 **Backup & Restore**: Automatic backups with timestamped restore points
-⚡ **Quick Setup**: One-command configuration with recommended settings
-🎛️ **Custom Configuration**: Granular control over performance, security, and development settings
-📊 **Configuration Viewer**: Beautiful display of current PHP settings and extensions
-🔄 **Interactive Mode**: User-friendly prompts and selections
-🛡️ **Safe Operations**: Always creates backups before making changes
+### 🎯 **Intelligent Framework Detection & One-Click Configuration**
+
+- **Auto-Detects**: Laravel, WordPress, Symfony, CodeIgniter, Drupal, Magento
+- **Smart Presets**: Framework-specific optimized configurations
+- **Zero Knowledge Required**: Just select your framework and go!
+- **Production Ready**: Separate presets for development and production
+
+### 🚀 **What Makes It Unbeatable**
+
+🧠 **Intelligent**: Automatically detects your framework and suggests optimal settings
+🎯 **One-Click Setup**: Laravel? WordPress? Just click and it's perfectly configured
+🛡️ **100% Safe**: Every change creates automatic backups - never lose your config
+⚡ **Lightning Fast**: Powered by Bun runtime for instant configuration
+🎨 **Beautiful Interface**: Rainbow gradients, icons, and professional layouts
+📚 **Educational**: Learn what each setting does with detailed explanations
+🔄 **Reversible**: Undo any change with one command
+🎛️ **Multi-Environment**: Handle multiple PHP versions effortlessly
+
+### 🎯 **Framework-Specific Presets**
+
+- **🔥 Laravel**: Eloquent, Artisan, Redis, Queue optimization
+- **📝 WordPress**: Media handling, plugin compatibility, security
+- **🎼 Symfony**: Enterprise-grade, Doctrine, APCu caching
+- **🚀 CodeIgniter**: Lightweight, fast, minimal configuration
+- **💧 Drupal**: Robust CMS, high performance, clean URLs
+- **🛒 Magento**: E-commerce optimized, high memory, Redis
+- **🛠️ Development**: Xdebug, error reporting, unlimited execution
+- **🏭 Production**: Secure, optimized, error logging only
 
 ## 🚀 Quick Start
 
@@ -40,28 +61,69 @@ chmod +x index.ts
 ### Basic Usage
 
 ```bash
-# Interactive mode (recommended for first-time users)
-bun start
+# 🧠 SMART MODE (NEW - Recommended!)
+bun start                    # Auto-detects your framework and configures perfectly
 
-# Quick setup with recommended settings
-bun run quick
+# 🎯 FRAMEWORK SHORTCUTS
+bun run preset               # Choose from framework presets
+bun run laravel             # Quick Laravel setup
+bun run wordpress           # Quick WordPress setup
 
-# List all PHP environments
-bun run list
+# 🛠️ ADVANCED MODES
+bun run interactive         # Advanced interactive configuration
+bun run quick               # Quick setup with recommended settings
+bun run list                # List all PHP environments
+bun run view                # View current configuration
 
-# Manage extensions
-bun run extensions
-
-# View current configuration
-bun run view
-
-# Backup management
-bun run backup
+# 🩺 TROUBLESHOOTING
+bun run doctor              # Fix all PHP configuration issues automatically
 ```
 
 ## 🎯 Usage Examples
 
-### 1. Interactive Mode (Recommended)
+### 1. 🧠 Smart Mode (NEW - Most Intelligent!)
+
+```bash
+bun start
+```
+
+**What happens:**
+
+1. 🎨 **Beautiful Rainbow Banner**: Professional gradient welcome screen
+2. 🔍 **Auto-Detection**: Scans your project directory for framework files
+3. 🎯 **Smart Suggestions**: Shows detected frameworks at the top with special badges
+4. 📋 **Detailed Preview**: See exactly what will be configured before applying
+5. ⚡ **One-Click Apply**: Select framework → Choose PHP version → Done!
+
+**Example Output:**
+
+```
+🎯 AUTO-DETECTED IN CURRENT DIRECTORY
+🔥 Laravel (DETECTED) - Optimized for Laravel applications with Eloquent, Artisan...
+
+🔥 POPULAR FRAMEWORKS
+🎼 Symfony - Enterprise-grade configuration for Symfony applications
+🚀 CodeIgniter - Lightweight configuration for CodeIgniter framework
+
+📝 CONTENT MANAGEMENT
+📝 WordPress - Optimized for WordPress sites with media handling...
+💧 Drupal - Robust configuration for Drupal CMS with high performance
+```
+
+### 2. Framework-Specific Quick Setup
+
+```bash
+# Laravel developers
+bun run laravel              # Instantly configure for Laravel
+
+# WordPress developers
+bun run wordpress            # Perfect WordPress configuration
+
+# Any framework
+bun run preset               # Choose from all available presets
+```
+
+### 3. Traditional Interactive Mode
 
 ```bash
 bun start
@@ -195,17 +257,34 @@ DEFAULT_PATH="C:/php/"
 
 ## 📋 Available Commands
 
-| Command                  | Description            | Example                       |
-| ------------------------ | ---------------------- | ----------------------------- |
-| `bun start`              | Interactive mode       | `bun start`                   |
-| `bun run quick`          | Quick setup            | `bun run quick --version 8.2` |
-| `bun run list`           | List PHP environments  | `bun run list`                |
-| `bun run extensions`     | Manage extensions      | `bun run extensions`          |
-| `bun run backup`         | Backup management      | `bun run backup --list`       |
-| `bun run view`           | View configuration     | `bun run view --version 8.1`  |
-| `bun run fix`            | Fix PHP config issues  | `bun run fix`                 |
-| `bun run fix-extensions` | Fix missing extensions | `bun run fix-extensions`      |
-| `bun run doctor`         | Complete health check  | `bun run doctor`              |
+### 🧠 Smart & Framework Commands
+
+| Command             | Description                                  | Example             |
+| ------------------- | -------------------------------------------- | ------------------- |
+| `bun start`         | 🧠 Smart framework detection & configuration | `bun start`         |
+| `bun run preset`    | 🎯 Framework preset selection                | `bun run preset`    |
+| `bun run laravel`   | 🔥 Quick Laravel configuration               | `bun run laravel`   |
+| `bun run wordpress` | 📝 Quick WordPress configuration             | `bun run wordpress` |
+| `bun run symfony`   | 🎼 Quick Symfony configuration               | `bun run symfony`   |
+
+### 🛠️ Advanced Commands
+
+| Command               | Description                         | Example                       |
+| --------------------- | ----------------------------------- | ----------------------------- |
+| `bun run interactive` | 🎛️ Advanced interactive mode        | `bun run interactive`         |
+| `bun run quick`       | ⚡ Quick setup with recommendations | `bun run quick --version 8.2` |
+| `bun run list`        | 📋 List PHP environments            | `bun run list`                |
+| `bun run extensions`  | 🧩 Manage extensions                | `bun run extensions`          |
+| `bun run backup`      | 💾 Backup management                | `bun run backup --list`       |
+| `bun run view`        | 📊 View configuration               | `bun run view --version 8.1`  |
+
+### 🩺 Troubleshooting Commands
+
+| Command                  | Description                    | Example                  |
+| ------------------------ | ------------------------------ | ------------------------ |
+| `bun run fix`            | 🔧 Fix PHP config issues       | `bun run fix`            |
+| `bun run fix-extensions` | 🧩 Fix missing extensions      | `bun run fix-extensions` |
+| `bun run doctor`         | 🩺 Complete health check & fix | `bun run doctor`         |
 
 ## 🩺 PHP Doctor - Automatic Issue Detection & Fixing
 

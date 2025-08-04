@@ -13,6 +13,7 @@ import { promisify } from "util";
 
 import fs from "fs-extra";
 import path from "path";
+import { IntelligentPresetManager } from "./intelligent-preset-manager.js";
 import { detectAllPhpEnvironments } from "./phpEnvironmentUtils.js";
 import {
   addCustomSettings,
@@ -31,7 +32,7 @@ const program = new Command();
 program
   .name("php-ini-pro")
   .description("🚀 Professional PHP INI Configuration Manager")
-  .version("2.0.0");
+  .version("3.0.0");
 
 /**
  * Display welcome banner
@@ -873,10 +874,31 @@ async function cleanBackups(environment: any) {
 }
 
 // CLI Commands
+
+// Smart Preset mode (NEW - default command)
+program
+  .command("smart")
+  .alias("s")
+  .description("🧠 Smart framework detection and configuration (default)")
+  .action(async () => {
+    const manager = new IntelligentPresetManager();
+    await manager.run();
+  });
+
+// Framework presets shortcut
+program
+  .command("preset")
+  .alias("p")
+  .description("🎯 Quick framework preset selection")
+  .action(async () => {
+    const manager = new IntelligentPresetManager();
+    await manager.run();
+  });
+
 program
   .command("interactive")
   .alias("i")
-  .description("🎯 Interactive configuration mode (default)")
+  .description("🎛️ Advanced interactive configuration mode")
   .action(async () => {
     await interactiveConfig();
   });
@@ -1070,9 +1092,10 @@ program
     }
   });
 
-// Default action (interactive mode)
+// Default action (smart preset mode)
 if (process.argv.length === 2) {
-  interactiveConfig();
+  const manager = new IntelligentPresetManager();
+  manager.run();
 } else {
   program.parse();
 }
