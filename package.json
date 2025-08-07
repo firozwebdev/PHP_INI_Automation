@@ -1,16 +1,18 @@
 {
   "name": "php-ini-automation",
   "description": "Automated PHP ini configuration tool for Laravel and other PHP projects across multiple environments (Laragon, XAMPP, WAMP, PVM)",
-  "version": "3.0.0",
-  "type": "module",
+  "version": "4.0.6",
+  "type": "commonjs",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "php-ini-automation": "dist/index.js"
+    "php-ini-automation": "dist/index.js",
+    "pia": "pia.js"
   },
   "files": [
     "dist/**/*",
+    "pia.js",
     "README.md",
     "LICENSE"
   ],

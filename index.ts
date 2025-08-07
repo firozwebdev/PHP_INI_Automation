@@ -2,8 +2,8 @@
 
 import fs from 'fs-extra';
 import { createInterface } from 'readline';
-import { determinePhpIniPaths, PhpInstallation, scanPhpInstallations, validatePhpInstallation } from './phpEnvironmentUtils.js';
-import { customizePhpIni, validateSourceFile } from './phpIniManager.js';
+import { determinePhpIniPaths, PhpInstallation, scanPhpInstallations, validatePhpInstallation } from './phpEnvironmentUtils';
+import { customizePhpIni, validateSourceFile } from './phpIniManager';
 
 // ANSI color codes for better CLI experience
 const colors = {
@@ -192,10 +192,15 @@ async function updatePhpIni(version: string = '', interactive: boolean = true): 
         }
 
         console.log(`${colors.green}✅ Installation validation passed${colors.reset}`);
+
+        if (validation.needsSudo) {
+            console.log(`${colors.cyan}🔐 Elevated permissions required - using sudo for file operations${colors.reset}`);
+        }
+
         console.log(`${colors.bright}🔧 Customizing php.ini configuration...${colors.reset}`);
 
-        validateSourceFile(selectedInstallation.iniPath);
-        await customizePhpIni(selectedInstallation.iniPath, selectedInstallation.extensionDir);
+        validateSourceFile(selectedInstallation.iniPath, validation.needsSudo);
+        await customizePhpIni(selectedInstallation.iniPath, selectedInstallation.extensionDir, {}, validation.needsSudo);
 
         console.log(`\n${colors.green}${colors.bright}🎉 SUCCESS! PHP configuration updated successfully!${colors.reset}`);
         console.log(`${colors.bright}📋 Summary:${colors.reset}`);
@@ -219,6 +224,26 @@ async function updatePhpIni(version: string = '', interactive: boolean = true): 
 }
 
 /**
+ * Displays version information
+ */
+function displayVersion(): void {
+    const version = '4.0.6'; // Current version
+    console.log(`${colors.bright}PHP INI Automation${colors.reset} v${colors.green}${version}${colors.reset}`);
+    console.log(`${colors.cyan}Cross-platform PHP configuration tool${colors.reset}\n`);
+
+    console.log(`${colors.bright}Platform:${colors.reset} ${process.platform} ${process.arch}`);
+    console.log(`${colors.bright}Node.js:${colors.reset} ${process.version}`);
+    console.log(`${colors.bright}Author:${colors.reset} PHP INI Automation Team\n`);
+
+    console.log(`${colors.yellow}💡 Quick commands:${colors.reset}`);
+    console.log(`  ${colors.cyan}php-ini-automation${colors.reset}        # Configure PHP`);
+    console.log(`  ${colors.cyan}pia${colors.reset}                       # Short alias`);
+    console.log(`  ${colors.cyan}pia -l${colors.reset}                    # List installations`);
+    console.log(`  ${colors.cyan}pia -v${colors.reset}                    # Show version`);
+    console.log(`  ${colors.cyan}pia -h${colors.reset}                    # Show help\n`);
+}
+
+/**
  * Displays help information
  */
 function displayHelp(): void {
@@ -234,8 +259,9 @@ function displayHelp(): void {
     console.log('  php-ini-automation --help       # Show this help\n');
 
     console.log(`${colors.bright}OPTIONS:${colors.reset}`);
-    console.log('  --list, -l     List all detected PHP installations');
-    console.log('  --help, -h     Show this help message');
+    console.log('  --list, -l         List all detected PHP installations');
+    console.log('  --version, -v      Show version information');
+    console.log('  --help, -h         Show this help message');
     console.log('  --non-interactive  Run without user prompts\n');
 
     console.log(`${colors.bright}ENVIRONMENT VARIABLES:${colors.reset}`);
@@ -293,6 +319,7 @@ const isMainModule = process.argv[1] && (
 if (isMainModule) {
     const args = process.argv.slice(2);
     const hasHelp = args.includes('--help') || args.includes('-h');
+    const hasVersion = args.includes('--version') || args.includes('-v');
     const hasList = args.includes('--list') || args.includes('-l');
     const nonInteractive = args.includes('--non-interactive');
 
@@ -301,6 +328,8 @@ if (isMainModule) {
 
     if (hasHelp) {
         displayHelp();
+    } else if (hasVersion) {
+        displayVersion();
     } else if (hasList) {
         listInstallations().catch(console.error);
     } else {

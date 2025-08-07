@@ -3,6 +3,18 @@ import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
 
+// ANSI color codes for consistent styling
+const colors = {
+    reset: '\x1b[0m',
+    bright: '\x1b[1m',
+    red: '\x1b[31m',
+    green: '\x1b[32m',
+    yellow: '\x1b[33m',
+    blue: '\x1b[34m',
+    cyan: '\x1b[36m',
+    white: '\x1b[37m'
+};
+
 // Enhanced interfaces
 export interface PhpInstallation {
     version: string;
@@ -42,165 +54,429 @@ interface DetectionResult {
     systemPhp?: PhpInstallation;
 }
 
-// Comprehensive PHP environment configurations with intelligent detection
-const ENVIRONMENT_CONFIGS: EnvironmentConfig[] = [
-    {
-        name: 'Laragon',
-        priority: 1,
-        deepScan: true,
-        maxDepth: 3,
-        basePaths: [
-            process.env.LARAGON_PATH || '',
-            'C:/laragon',
-            'D:/laragon',
-            'E:/laragon',
-            'F:/laragon',
-            path.join(os.homedir(), 'laragon'),
-            'C:/laragon/bin',
-            'D:/laragon/bin'
-        ],
-        iniPattern: ['php', '{version}', 'php.ini'],
-        extPattern: ['php', '{version}', 'ext'],
-        phpExePattern: ['php', '{version}', 'php.exe'],
-        versionPattern: ['php', '*']
-    },
-    {
-        name: 'PVM',
-        priority: 2,
-        deepScan: true,
-        maxDepth: 4,
-        basePaths: [
-            process.env.PVM_PATH || '',
-            'C:/tools/php',
-            'C:/pvm',
-            'D:/pvm',
-            path.join(os.homedir(), 'pvm'),
-            path.join(os.homedir(), '.pvm'),
-            'C:/Users/*/pvm',
-            'C:/dev/php',
-            'C:/tools/pvm'
-        ],
-        iniPattern: ['sym', 'php.ini'],
-        extPattern: ['php', '{version}', 'ext'],
-        phpExePattern: ['sym', 'php.exe'],
-        versionPattern: ['php', '*']
-    },
-    {
-        name: 'WAMP',
-        priority: 3,
-        deepScan: true,
-        maxDepth: 4,
-        basePaths: [
-            process.env.WAMP_PATH || '',
-            process.env.WAMPP_PATH || '',
-            'C:/wamp',
-            'C:/wamp64',
-            'D:/wamp',
-            'D:/wamp64',
-            'E:/wamp64',
-            'C:/wampserver',
-            'D:/wampserver'
-        ],
-        iniPattern: ['bin', 'php', 'php{version}', 'php.ini'],
-        extPattern: ['bin', 'php', 'php{version}', 'ext'],
-        phpExePattern: ['bin', 'php', 'php{version}', 'php.exe'],
-        versionPattern: ['bin', 'php', 'php*']
-    },
-    {
-        name: 'XAMPP',
-        priority: 4,
-        deepScan: false,
-        basePaths: [
-            process.env.XAMPP_PATH || '',
-            'C:/xampp',
-            'D:/xampp',
-            'E:/xampp',
-            'C:/xampp/php',
-            'D:/xampp/php'
-        ],
-        iniPattern: ['php.ini'],
-        extPattern: ['ext'],
-        phpExePattern: ['php.exe']
-    },
-    {
-        name: 'MAMP',
-        priority: 5,
-        deepScan: true,
-        maxDepth: 3,
-        basePaths: [
-            'C:/MAMP',
-            'D:/MAMP',
-            'C:/Applications/MAMP'
-        ],
-        iniPattern: ['bin', 'php', 'php{version}', 'conf', 'php.ini'],
-        extPattern: ['bin', 'php', 'php{version}', 'lib', 'php', 'extensions'],
-        phpExePattern: ['bin', 'php', 'php{version}', 'php.exe'],
-        versionPattern: ['bin', 'php', 'php*']
-    },
-    {
-        name: 'Uniform Server',
-        priority: 6,
-        deepScan: true,
-        maxDepth: 3,
-        basePaths: [
-            'C:/UniServer',
-            'D:/UniServer',
-            'C:/UniServerZ'
-        ],
-        iniPattern: ['core', 'php{version}', 'php.ini'],
-        extPattern: ['core', 'php{version}', 'ext'],
-        phpExePattern: ['core', 'php{version}', 'php.exe'],
-        versionPattern: ['core', 'php*']
-    },
-    {
-        name: 'Bitnami',
-        priority: 7,
-        deepScan: true,
-        maxDepth: 4,
-        basePaths: [
-            'C:/Bitnami',
-            'D:/Bitnami',
-            'C:/Program Files/Bitnami'
-        ],
-        iniPattern: ['php', 'etc', 'php.ini'],
-        extPattern: ['php', 'lib', 'php', 'extensions'],
-        phpExePattern: ['php', 'bin', 'php.exe'],
-        versionPattern: ['*']
-    },
-    {
-        name: 'Custom/System',
-        priority: 8,
-        deepScan: true,
-        maxDepth: 2,
-        basePaths: [
-            process.env.DEFAULT_PATH || '',
-            'C:/php',
-            'D:/php',
-            'C:/Program Files/PHP',
-            'C:/Program Files (x86)/PHP',
-            'C:/tools/php',
-            'C:/dev/php',
-            path.join(os.homedir(), 'php')
-        ],
-        iniPattern: ['php.ini'],
-        extPattern: ['ext'],
-        phpExePattern: ['php.exe']
+// Cross-platform PHP environment configurations
+const getEnvironmentConfigs = (): EnvironmentConfig[] => {
+    const isWindows = process.platform === 'win32';
+    const phpExe = isWindows ? 'php.exe' : 'php';
+
+    const configs: EnvironmentConfig[] = [];
+
+    if (isWindows) {
+        // Windows-specific environments
+        configs.push(
+            {
+                name: 'Laragon',
+                priority: 1,
+                deepScan: true,
+                maxDepth: 3,
+                basePaths: [
+                    process.env.LARAGON_PATH || '',
+                    'C:/laragon',
+                    'D:/laragon',
+                    'E:/laragon',
+                    'F:/laragon',
+                    path.join(os.homedir(), 'laragon'),
+                    'C:/laragon/bin',
+                    'D:/laragon/bin'
+                ],
+                iniPattern: ['php', '{version}', 'php.ini'],
+                extPattern: ['php', '{version}', 'ext'],
+                phpExePattern: ['php', '{version}', phpExe],
+                versionPattern: ['php', '*']
+            },
+            {
+                name: 'PVM',
+                priority: 2,
+                deepScan: true,
+                maxDepth: 4,
+                basePaths: [
+                    process.env.PVM_PATH || '',
+                    'C:/tools/php',
+                    'C:/pvm',
+                    'D:/pvm',
+                    path.join(os.homedir(), 'pvm'),
+                    path.join(os.homedir(), '.pvm'),
+                    'C:/Users/*/pvm',
+                    'C:/dev/php',
+                    'C:/tools/pvm'
+                ],
+                iniPattern: ['sym', 'php.ini'],
+                extPattern: ['php', '{version}', 'ext'],
+                phpExePattern: ['sym', phpExe],
+                versionPattern: ['php', '*']
+            },
+            {
+                name: 'WAMP',
+                priority: 3,
+                deepScan: true,
+                maxDepth: 4,
+                basePaths: [
+                    process.env.WAMP_PATH || '',
+                    process.env.WAMPP_PATH || '',
+                    'C:/wamp',
+                    'C:/wamp64',
+                    'D:/wamp',
+                    'D:/wamp64',
+                    'E:/wamp64',
+                    'C:/wampserver',
+                    'D:/wampserver'
+                ],
+                iniPattern: ['bin', 'php', 'php{version}', 'php.ini'],
+                extPattern: ['bin', 'php', 'php{version}', 'ext'],
+                phpExePattern: ['bin', 'php', 'php{version}', phpExe],
+                versionPattern: ['bin', 'php', 'php*']
+            },
+            {
+                name: 'XAMPP',
+                priority: 4,
+                deepScan: false,
+                basePaths: [
+                    process.env.XAMPP_PATH || '',
+                    'C:/xampp',
+                    'D:/xampp',
+                    'E:/xampp',
+                    'C:/xampp/php',
+                    'D:/xampp/php'
+                ],
+                iniPattern: ['php.ini'],
+                extPattern: ['ext'],
+                phpExePattern: [phpExe]
+            },
+            {
+                name: 'MAMP',
+                priority: 5,
+                deepScan: true,
+                maxDepth: 3,
+                basePaths: [
+                    'C:/MAMP',
+                    'D:/MAMP',
+                    'C:/Applications/MAMP'
+                ],
+                iniPattern: ['bin', 'php', 'php{version}', 'conf', 'php.ini'],
+                extPattern: ['bin', 'php', 'php{version}', 'lib', 'php', 'extensions'],
+                phpExePattern: ['bin', 'php', 'php{version}', phpExe],
+                versionPattern: ['bin', 'php', 'php*']
+            },
+            {
+                name: 'Uniform Server',
+                priority: 6,
+                deepScan: true,
+                maxDepth: 3,
+                basePaths: [
+                    'C:/UniServer',
+                    'D:/UniServer',
+                    'C:/UniServerZ'
+                ],
+                iniPattern: ['core', 'php{version}', 'php.ini'],
+                extPattern: ['core', 'php{version}', 'ext'],
+                phpExePattern: ['core', 'php{version}', phpExe],
+                versionPattern: ['core', 'php*']
+            },
+            {
+                name: 'Bitnami',
+                priority: 7,
+                deepScan: true,
+                maxDepth: 4,
+                basePaths: [
+                    'C:/Bitnami',
+                    'D:/Bitnami',
+                    'C:/Program Files/Bitnami'
+                ],
+                iniPattern: ['php', 'etc', 'php.ini'],
+                extPattern: ['php', 'lib', 'php', 'extensions'],
+                phpExePattern: ['php', 'bin', phpExe],
+                versionPattern: ['*']
+            },
+            {
+                name: 'Custom/System',
+                priority: 8,
+                deepScan: true,
+                maxDepth: 2,
+                basePaths: [
+                    process.env.DEFAULT_PATH || '',
+                    'C:/php',
+                    'D:/php',
+                    'C:/Program Files/PHP',
+                    'C:/Program Files (x86)/PHP',
+                    'C:/tools/php',
+                    'C:/dev/php',
+                    path.join(os.homedir(), 'php')
+                ],
+                iniPattern: ['php.ini'],
+                extPattern: ['ext'],
+                phpExePattern: [phpExe]
+            }
+        );
+    } else {
+        // Linux/Unix-specific environments
+        configs.push(
+            {
+                name: 'System Package Manager',
+                priority: 1,
+                deepScan: false,
+                basePaths: [
+                    '/usr/bin',
+                    '/usr/local/bin',
+                    '/opt/php',
+                    '/etc/php'
+                ],
+                iniPattern: ['php.ini'],
+                extPattern: ['extensions'],
+                phpExePattern: [phpExe]
+            },
+            {
+                name: 'Ubuntu/Debian APT',
+                priority: 2,
+                deepScan: true,
+                maxDepth: 3,
+                basePaths: [
+                    '/etc/php',
+                    '/usr/lib/php',
+                    '/usr/bin'
+                ],
+                iniPattern: ['{version}', 'cli', 'php.ini'],
+                extPattern: ['{version}', 'mods-available'],
+                phpExePattern: [phpExe],
+                versionPattern: ['*']
+            },
+            {
+                name: 'CentOS/RHEL',
+                priority: 3,
+                deepScan: true,
+                maxDepth: 2,
+                basePaths: [
+                    '/etc',
+                    '/usr/lib64/php',
+                    '/usr/share/php'
+                ],
+                iniPattern: ['php.ini'],
+                extPattern: ['modules'],
+                phpExePattern: [phpExe]
+            },
+            {
+                name: 'Homebrew',
+                priority: 4,
+                deepScan: true,
+                maxDepth: 4,
+                basePaths: [
+                    '/usr/local/etc/php',
+                    '/opt/homebrew/etc/php',
+                    '/usr/local/Cellar/php',
+                    '/opt/homebrew/Cellar/php'
+                ],
+                iniPattern: ['{version}', 'php.ini'],
+                extPattern: ['{version}', 'pecl'],
+                phpExePattern: ['{version}', 'bin', phpExe],
+                versionPattern: ['*']
+            },
+            {
+                name: 'Custom/Compiled',
+                priority: 5,
+                deepScan: true,
+                maxDepth: 3,
+                basePaths: [
+                    process.env.PHP_PATH || '',
+                    '/usr/local/php',
+                    '/opt/php',
+                    path.join(os.homedir(), 'php'),
+                    path.join(os.homedir(), '.local/php')
+                ],
+                iniPattern: ['php.ini'],
+                extPattern: ['lib', 'php', 'extensions'],
+                phpExePattern: ['bin', phpExe]
+            },
+            {
+                name: 'System Package Manager',
+                priority: 1,
+                deepScan: false,
+                basePaths: [
+                    '/usr/bin',
+                    '/usr/local/bin',
+                    '/opt/php',
+                    '/etc/php'
+                ],
+                iniPattern: ['php.ini'],
+                extPattern: ['extensions'],
+                phpExePattern: [phpExe]
+            },
+            {
+                name: 'Ubuntu/Debian APT',
+                priority: 2,
+                deepScan: true,
+                maxDepth: 3,
+                basePaths: [
+                    '/etc/php',
+                    '/usr/lib/php',
+                    '/var/lib/php'
+                ],
+                iniPattern: ['{version}', 'apache2', 'php.ini'],
+                extPattern: ['{version}', 'mods-available'],
+                phpExePattern: ['{version}', 'bin', phpExe],
+                versionPattern: ['*']
+            },
+            {
+                name: 'CentOS/RHEL YUM/DNF',
+                priority: 3,
+                deepScan: true,
+                maxDepth: 3,
+                basePaths: [
+                    '/etc/php.ini',
+                    '/etc/php.d',
+                    '/usr/lib64/php',
+                    '/usr/share/php'
+                ],
+                iniPattern: ['php.ini'],
+                extPattern: ['modules'],
+                phpExePattern: [phpExe]
+            },
+            {
+                name: 'Homebrew (macOS/Linux)',
+                priority: 4,
+                deepScan: true,
+                maxDepth: 4,
+                basePaths: [
+                    '/usr/local/etc/php',
+                    '/opt/homebrew/etc/php',
+                    '/usr/local/Cellar/php',
+                    '/opt/homebrew/Cellar/php',
+                    path.join(os.homedir(), '.brew/etc/php')
+                ],
+                iniPattern: ['{version}', 'php.ini'],
+                extPattern: ['{version}', 'pecl'],
+                phpExePattern: ['{version}', 'bin', phpExe],
+                versionPattern: ['*']
+            },
+            {
+                name: 'Docker/Container',
+                priority: 5,
+                deepScan: true,
+                maxDepth: 2,
+                basePaths: [
+                    '/usr/local/etc/php',
+                    '/etc/php',
+                    '/var/www/html'
+                ],
+                iniPattern: ['php.ini'],
+                extPattern: ['extensions'],
+                phpExePattern: [phpExe]
+            },
+            {
+                name: 'Compiled/Custom',
+                priority: 6,
+                deepScan: true,
+                maxDepth: 3,
+                basePaths: [
+                    process.env.PHP_PATH || '',
+                    '/usr/local/php',
+                    '/opt/php',
+                    '/home/*/php',
+                    path.join(os.homedir(), 'php'),
+                    path.join(os.homedir(), '.local/php'),
+                    '/usr/local/src/php'
+                ],
+                iniPattern: ['php.ini'],
+                extPattern: ['lib', 'php', 'extensions'],
+                phpExePattern: ['bin', phpExe],
+                versionPattern: ['*']
+            }
+        );
     }
-];
+
+    return configs;
+};
 
 /**
- * Gets comprehensive PHP information from executable with error suppression
+ * Gets php.ini path directly from PHP executable
+ */
+function getPhpIniPathFromExecutable(phpPath: string): string[] {
+    try {
+        const isWindows = process.platform === 'win32';
+        const nullDevice = isWindows ? '2>nul' : '2>/dev/null';
+
+        // Get loaded configuration file path
+        const result = execSync(`"${phpPath}" -r "echo php_ini_loaded_file();" ${nullDevice}`, {
+            encoding: 'utf8',
+            timeout: 5000,
+            stdio: ['pipe', 'pipe', 'ignore']
+        });
+
+        const iniPath = result.trim();
+        if (iniPath && iniPath !== '' && fs.existsSync(iniPath)) {
+            return [iniPath];
+        }
+
+        // Try alternative method
+        const configResult = execSync(`"${phpPath}" --ini ${nullDevice}`, {
+            encoding: 'utf8',
+            timeout: 5000,
+            stdio: ['pipe', 'pipe', 'ignore']
+        });
+
+        const loadedMatch = configResult.match(/Loaded Configuration File:\s*(.+)/);
+        if (loadedMatch && loadedMatch[1] && loadedMatch[1].trim() !== '(none)') {
+            const loadedPath = loadedMatch[1].trim();
+            if (fs.existsSync(loadedPath)) {
+                return [loadedPath];
+            }
+        }
+
+        // Extract scan directories
+        const scanMatch = configResult.match(/Scan for additional \.ini files in:\s*(.+)/);
+        if (scanMatch && scanMatch[1] && scanMatch[1].trim() !== '(none)') {
+            const scanDirs = scanMatch[1].trim().split(/[,;:]/);
+            return scanDirs.map(dir => path.join(dir.trim(), 'php.ini')).filter(p => fs.existsSync(p));
+        }
+
+    } catch {
+        // Failed to get ini path from PHP
+    }
+
+    return [];
+}
+
+/**
+ * Gets extension directory path directly from PHP executable
+ */
+function getPhpExtensionDirFromExecutable(phpPath: string): string[] {
+    try {
+        const isWindows = process.platform === 'win32';
+        const nullDevice = isWindows ? '2>nul' : '2>/dev/null';
+
+        // Get extension directory from PHP
+        const result = execSync(`"${phpPath}" -r "echo ini_get('extension_dir');" ${nullDevice}`, {
+            encoding: 'utf8',
+            timeout: 5000,
+            stdio: ['pipe', 'pipe', 'ignore']
+        });
+
+        const extDir = result.trim();
+        if (extDir && extDir !== '' && fs.existsSync(extDir)) {
+            return [extDir];
+        }
+
+    } catch {
+        // Failed to get extension dir from PHP
+    }
+
+    return [];
+}
+
+/**
+ * Gets comprehensive PHP information from executable (cross-platform)
  */
 function getPhpInfoFromExecutable(phpPath: string): Partial<PhpInstallation> | null {
     try {
+        const isWindows = process.platform === 'win32';
+        const nullDevice = isWindows ? '2>nul' : '2>/dev/null';
+
         // Suppress PHP warnings and errors during detection
-        const versionResult = execSync(`"${phpPath}" -v 2>nul`, {
+        const versionResult = execSync(`"${phpPath}" -v ${nullDevice}`, {
             encoding: 'utf8',
             timeout: 5000,
             stdio: ['pipe', 'pipe', 'ignore'] // Ignore stderr
         });
 
-        const configResult = execSync(`"${phpPath}" -i 2>nul`, {
+        const configResult = execSync(`"${phpPath}" -i ${nullDevice}`, {
             encoding: 'utf8',
             timeout: 10000,
             stdio: ['pipe', 'pipe', 'ignore'] // Ignore stderr
@@ -226,7 +502,10 @@ function getPhpInfoFromExecutable(phpPath: string): Partial<PhpInstallation> | n
     } catch {
         // Fallback to simple version detection
         try {
-            const result = execSync(`"${phpPath}" -v 2>nul`, {
+            const isWindows = process.platform === 'win32';
+            const nullDevice = isWindows ? '2>nul' : '2>/dev/null';
+
+            const result = execSync(`"${phpPath}" -v ${nullDevice}`, {
                 encoding: 'utf8',
                 timeout: 5000,
                 stdio: ['pipe', 'pipe', 'ignore']
@@ -240,7 +519,7 @@ function getPhpInfoFromExecutable(phpPath: string): Partial<PhpInstallation> | n
 }
 
 /**
- * Detects PHP installations from Windows Registry (silent operation)
+ * Detects PHP installations from Windows Registry (Windows only)
  */
 function detectFromRegistry(): PhpInstallation[] {
     const installations: PhpInstallation[] = [];
@@ -287,17 +566,21 @@ function detectFromRegistry(): PhpInstallation[] {
 }
 
 /**
- * Detects PHP from system PATH (silent operation)
+ * Detects PHP from system PATH (cross-platform)
  */
 function detectFromPath(): PhpInstallation[] {
     const installations: PhpInstallation[] = [];
 
     try {
-        const result = execSync('where php 2>nul', {
+        const isWindows = process.platform === 'win32';
+        const command = isWindows ? 'where php 2>nul' : 'which php 2>/dev/null';
+
+        const result = execSync(command, {
             encoding: 'utf8',
             timeout: 5000,
             stdio: ['pipe', 'pipe', 'ignore'] // Suppress error output
         });
+
         const phpPaths = result.split('\n').filter(line => line.trim());
 
         for (const phpPath of phpPaths) {
@@ -318,7 +601,7 @@ function detectFromPath(): PhpInstallation[] {
 }
 
 /**
- * Deep recursive scan for PHP installations
+ * Deep recursive scan for PHP installations (cross-platform)
  */
 function deepScanDirectory(basePath: string, maxDepth: number = 3, currentDepth: number = 0): string[] {
     const phpPaths: string[] = [];
@@ -329,6 +612,8 @@ function deepScanDirectory(basePath: string, maxDepth: number = 3, currentDepth:
 
     try {
         const entries = fs.readdirSync(basePath);
+        const isWindows = process.platform === 'win32';
+        const phpExeName = isWindows ? 'php.exe' : 'php';
 
         for (const entry of entries) {
             const fullPath = path.join(basePath, entry);
@@ -337,8 +622,8 @@ function deepScanDirectory(basePath: string, maxDepth: number = 3, currentDepth:
                 const stat = fs.statSync(fullPath);
 
                 if (stat.isDirectory()) {
-                    // Check if this directory contains php.exe
-                    const phpExePath = path.join(fullPath, 'php.exe');
+                    // Check if this directory contains PHP executable
+                    const phpExePath = path.join(fullPath, phpExeName);
                     if (fs.existsSync(phpExePath)) {
                         phpPaths.push(fullPath);
                     }
@@ -360,22 +645,39 @@ function deepScanDirectory(basePath: string, maxDepth: number = 3, currentDepth:
 }
 
 /**
- * Creates installation object from a directory path
+ * Creates installation object from a directory path (cross-platform)
  */
 function createInstallationFromPath(phpDir: string, environment: string): PhpInstallation | null {
     try {
-        const phpExePath = path.join(phpDir, 'php.exe');
+        const isWindows = process.platform === 'win32';
+        const phpExeName = isWindows ? 'php.exe' : 'php';
+        const phpExePath = path.join(phpDir, phpExeName);
+
         if (!fs.existsSync(phpExePath)) return null;
 
         const phpInfo = getPhpInfoFromExecutable(phpExePath);
         if (!phpInfo || !phpInfo.version) return null;
 
-        // Find php.ini
-        const possibleIniPaths = [
+        // Find php.ini (cross-platform paths)
+        const possibleIniPaths = isWindows ? [
             path.join(phpDir, 'php.ini'),
             path.join(phpDir, 'conf', 'php.ini'),
             path.join(phpDir, 'etc', 'php.ini'),
             path.join(phpDir, '..', 'php.ini')
+        ] : [
+            // Try to get actual php.ini path from PHP itself
+            ...getPhpIniPathFromExecutable(phpExePath),
+            // Common Linux/Unix paths
+            `/etc/php/${phpInfo.version}/apache2/php.ini`,
+            `/etc/php/${phpInfo.version}/cli/php.ini`,
+            `/etc/php/${phpInfo.version}/fpm/php.ini`,
+            `/etc/php/${phpInfo.version}/php.ini`,
+            '/etc/php.ini',
+            '/usr/local/etc/php.ini',
+            `/usr/local/etc/php/${phpInfo.version}/php.ini`,
+            path.join(phpDir, 'php.ini'),
+            path.join(phpDir, '..', 'etc', 'php.ini'),
+            path.join(phpDir, '..', 'lib', 'php.ini')
         ];
 
         let iniPath = '';
@@ -386,11 +688,25 @@ function createInstallationFromPath(phpDir: string, environment: string): PhpIns
             }
         }
 
-        // Find extension directory
-        const possibleExtDirs = [
+        // Find extension directory (cross-platform)
+        const possibleExtDirs = isWindows ? [
             path.join(phpDir, 'ext'),
             path.join(phpDir, 'extensions'),
             path.join(phpDir, 'lib', 'php', 'extensions'),
+            path.join(phpDir, 'modules')
+        ] : [
+            // Try to get actual extension dir from PHP
+            ...getPhpExtensionDirFromExecutable(phpExePath),
+            // Common Linux/Unix extension paths
+            `/usr/lib/php/${phpInfo.version}`,
+            `/usr/lib/php/${phpInfo.version.split('.').slice(0, 2).join('.')}`,
+            '/usr/lib/php/modules',
+            '/usr/lib/php/extensions',
+            `/usr/local/lib/php/extensions/no-debug-non-zts-${phpInfo.version}`,
+            `/usr/local/lib/php/extensions`,
+            path.join(phpDir, '..', 'lib', 'php', 'extensions'),
+            path.join(phpDir, '..', 'lib', 'php', 'modules'),
+            path.join(phpDir, 'extensions'),
             path.join(phpDir, 'modules')
         ];
 
@@ -427,58 +743,75 @@ function createInstallationFromPath(phpDir: string, environment: string): PhpIns
 export function scanPhpInstallations(): PhpInstallation[] {
     const installations: PhpInstallation[] = [];
     const foundPaths = new Set<string>(); // Prevent duplicates
+    const foundExecutables = new Set<string>(); // Prevent duplicate executables
 
     console.log('🔍 Scanning for PHP installations...');
 
     // Method 1: Detect from system PATH (highest priority)
     const pathInstallations = detectFromPath();
     for (const installation of pathInstallations) {
-        if (!foundPaths.has(installation.path)) {
+        const key = `${installation.path}|${installation.phpExecutable}`;
+        if (!foundPaths.has(key) && !foundExecutables.has(installation.phpExecutable)) {
             installations.push(installation);
-            foundPaths.add(installation.path);
+            foundPaths.add(key);
+            foundExecutables.add(installation.phpExecutable);
         }
     }
 
-    // Method 2: Detect from Windows Registry
+    // Method 2: Detect from Windows Registry (Windows only)
     if (process.platform === 'win32') {
         const registryInstallations = detectFromRegistry();
         for (const installation of registryInstallations) {
-            if (!foundPaths.has(installation.path)) {
+            const key = `${installation.path}|${installation.phpExecutable}`;
+            if (!foundPaths.has(key) && !foundExecutables.has(installation.phpExecutable)) {
                 installations.push(installation);
-                foundPaths.add(installation.path);
+                foundPaths.add(key);
+                foundExecutables.add(installation.phpExecutable);
             }
         }
     }
 
-    // Method 3: Scan known environment configurations
+    // Method 3: Scan known environment configurations (limited on Linux to avoid duplicates)
+    const ENVIRONMENT_CONFIGS = getEnvironmentConfigs();
+    const isLinux = process.platform === 'linux';
+
     for (const config of ENVIRONMENT_CONFIGS) {
+        // Skip some configs on Linux to avoid duplicates
+        if (isLinux && (config.name.includes('CentOS') || config.name.includes('X11'))) {
+            continue;
+        }
+
         for (const basePath of config.basePaths) {
             if (!basePath || basePath.includes('*')) {
                 // Handle wildcard paths
                 if (basePath.includes('*')) {
                     const expandedPaths = expandWildcardPath(basePath);
                     for (const expandedPath of expandedPaths) {
-                        scanEnvironmentPath(expandedPath, config, installations, foundPaths);
+                        scanEnvironmentPath(expandedPath, config, installations, foundPaths, foundExecutables);
                     }
                 }
                 continue;
             }
 
-            scanEnvironmentPath(basePath, config, installations, foundPaths);
+            scanEnvironmentPath(basePath, config, installations, foundPaths, foundExecutables);
         }
     }
 
-    // Method 4: Deep scan common directories (silent)
-    const commonDirs = ['C:/', 'D:/', 'E:/'];
-    for (const dir of commonDirs) {
-        if (fs.existsSync(dir)) {
-            const deepPaths = deepScanDirectory(dir, 2);
-            for (const phpPath of deepPaths) {
-                if (!foundPaths.has(phpPath)) {
-                    const installation = createInstallationFromPath(phpPath, 'Deep Scan');
-                    if (installation && installation.iniPath) {
-                        installations.push(installation);
-                        foundPaths.add(phpPath);
+    // Method 4: Deep scan common directories (cross-platform, limited to avoid duplicates)
+    const isWindows = process.platform === 'win32';
+    if (isWindows) {
+        // Only deep scan on Windows where it's more useful
+        const commonDirs = ['C:/', 'D:/', 'E:/'];
+        for (const dir of commonDirs) {
+            if (fs.existsSync(dir)) {
+                const deepPaths = deepScanDirectory(dir, 2);
+                for (const phpPath of deepPaths) {
+                    if (!foundPaths.has(phpPath)) {
+                        const installation = createInstallationFromPath(phpPath, 'Deep Scan');
+                        if (installation && installation.iniPath) {
+                            installations.push(installation);
+                            foundPaths.add(phpPath);
+                        }
                     }
                 }
             }
@@ -544,7 +877,8 @@ function scanEnvironmentPath(
     basePath: string,
     config: EnvironmentConfig,
     installations: PhpInstallation[],
-    foundPaths: Set<string>
+    foundPaths: Set<string>,
+    foundExecutables: Set<string>
 ): void {
     if (!fs.existsSync(basePath)) return;
 
@@ -555,17 +889,25 @@ function scanEnvironmentPath(
 
             for (const versionDir of versionDirs) {
                 const installation = createInstallation(basePath, versionDir, config);
-                if (installation && !foundPaths.has(installation.path)) {
-                    installations.push(installation);
-                    foundPaths.add(installation.path);
+                if (installation) {
+                    const key = `${installation.path}|${installation.phpExecutable}`;
+                    if (!foundPaths.has(key) && !foundExecutables.has(installation.phpExecutable)) {
+                        installations.push(installation);
+                        foundPaths.add(key);
+                        foundExecutables.add(installation.phpExecutable);
+                    }
                 }
             }
         } else {
             // Single version environment
             const installation = createInstallation(basePath, '', config);
-            if (installation && !foundPaths.has(installation.path)) {
-                installations.push(installation);
-                foundPaths.add(installation.path);
+            if (installation) {
+                const key = `${installation.path}|${installation.phpExecutable}`;
+                if (!foundPaths.has(key) && !foundExecutables.has(installation.phpExecutable)) {
+                    installations.push(installation);
+                    foundPaths.add(key);
+                    foundExecutables.add(installation.phpExecutable);
+                }
             }
         }
 
@@ -573,11 +915,13 @@ function scanEnvironmentPath(
         if (config.deepScan) {
             const deepPaths = deepScanDirectory(basePath, config.maxDepth || 3);
             for (const phpPath of deepPaths) {
-                if (!foundPaths.has(phpPath)) {
-                    const installation = createInstallationFromPath(phpPath, config.name);
-                    if (installation && installation.iniPath) {
+                const installation = createInstallationFromPath(phpPath, config.name);
+                if (installation && installation.iniPath) {
+                    const key = `${installation.path}|${installation.phpExecutable}`;
+                    if (!foundPaths.has(key) && !foundExecutables.has(installation.phpExecutable)) {
                         installations.push(installation);
-                        foundPaths.add(phpPath);
+                        foundPaths.add(key);
+                        foundExecutables.add(installation.phpExecutable);
                     }
                 }
             }
@@ -770,7 +1114,7 @@ function findPhpExecutable(basePath: string, version: string, config: Environmen
 }
 
 /**
- * Recursively searches for php.exe in a directory
+ * Recursively searches for PHP executable in a directory (cross-platform)
  */
 function findPhpExecutableInDir(dir: string, maxDepth: number = 2, currentDepth: number = 0): string {
     if (currentDepth >= maxDepth || !fs.existsSync(dir)) {
@@ -778,7 +1122,10 @@ function findPhpExecutableInDir(dir: string, maxDepth: number = 2, currentDepth:
     }
 
     try {
-        const phpExePath = path.join(dir, 'php.exe');
+        const isWindows = process.platform === 'win32';
+        const phpExeName = isWindows ? 'php.exe' : 'php';
+        const phpExePath = path.join(dir, phpExeName);
+
         if (fs.existsSync(phpExePath)) {
             return phpExePath;
         }
@@ -870,15 +1217,17 @@ export function getDetailedPhpDetection(): DetectionResult {
 }
 
 /**
- * Validates a PHP installation
+ * Validates a PHP installation with automatic permission handling
  */
 export function validatePhpInstallation(installation: PhpInstallation): {
     isValid: boolean;
     issues: string[];
     suggestions: string[];
+    needsSudo: boolean;
 } {
     const issues: string[] = [];
     const suggestions: string[] = [];
+    let needsSudo = false;
 
     // Check PHP executable
     if (!installation.phpExecutable || !fs.existsSync(installation.phpExecutable)) {
@@ -898,20 +1247,28 @@ export function validatePhpInstallation(installation: PhpInstallation): {
         suggestions.push('Check PHP installation or create extensions directory');
     }
 
-    // Check if php.ini is writable
+    // Check if php.ini is writable (with automatic permission handling for Unix)
     if (installation.iniPath && fs.existsSync(installation.iniPath)) {
         try {
             fs.accessSync(installation.iniPath, fs.constants.W_OK);
         } catch {
-            issues.push('php.ini file is not writable');
-            suggestions.push('Run as administrator or change file permissions');
+            const isUnix = process.platform !== 'win32';
+            if (isUnix) {
+                // On Unix systems, we can use sudo
+                needsSudo = true;
+                console.log(`${colors.yellow}ℹ️  php.ini requires elevated permissions - will use sudo automatically${colors.reset}`);
+            } else {
+                issues.push('php.ini file is not writable');
+                suggestions.push('Run as administrator or change file permissions');
+            }
         }
     }
 
     return {
         isValid: issues.length === 0,
         issues,
-        suggestions
+        suggestions,
+        needsSudo
     };
 }
 

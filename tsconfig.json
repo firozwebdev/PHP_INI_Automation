@@ -3,7 +3,7 @@
     // Enable latest features
     "lib": ["ESNext", "DOM"],
     "target": "ES2020",
-    "module": "ESNext",
+    "module": "CommonJS",
     "moduleDetection": "force",
     "allowJs": true,
 

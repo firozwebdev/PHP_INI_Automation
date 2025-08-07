@@ -1,12 +1,15 @@
-# PHP INI Automation v3.0 🚀
+# PHP INI Automation v4.0 🚀
 
-**The Ultimate PHP Configuration Tool - Intelligent, Powerful, Unbeatable**
+**The Ultimate Cross-Platform PHP Configuration Tool - Intelligent, Powerful, Unbeatable**
 
 [![npm version](https://badge.fury.io/js/php-ini-automation.svg)](https://badge.fury.io/js/php-ini-automation)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Downloads](https://img.shields.io/npm/dm/php-ini-automation.svg)](https://npmjs.org/package/php-ini-automation)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue.svg)](https://npmjs.org/package/php-ini-automation)
 
-> **Revolutionary PHP detection and configuration tool that automatically finds and configures ALL your PHP installations across ANY environment. From Laragon to XAMPP, PVM to WAMP - we detect them all!**
+> **Revolutionary cross-platform PHP detection and configuration tool that automatically finds and configures ALL your PHP installations across ANY environment and ANY operating system. From Windows (Laragon, XAMPP, WAMP) to Linux (APT, YUM, Homebrew) - we detect them all!**
+
+🎯 **Quick Start**: `npm install -g php-ini-automation && pia`
 
 ## 🌟 Revolutionary Features
 
@@ -28,8 +31,9 @@
 - **💾 Automatic Backup**: Timestamped backups before any changes
 - **🔧 Custom Settings Support**: Add your own PHP configurations
 
-## 🏗️ Supported Environments
+## 🌍 Cross-Platform Support
 
+### 🪟 **Windows Environments**
 | Environment | Multi-Version | Auto-Detection | Deep Scan | Priority |
 |-------------|---------------|----------------|-----------|----------|
 | **System PATH** | ✅ | ✅ | ✅ | 🥇 Highest |
@@ -40,7 +44,23 @@
 | **MAMP** | ✅ | ✅ | ✅ | 🏅 Medium |
 | **Uniform Server** | ✅ | ✅ | ✅ | 🏅 Medium |
 | **Bitnami** | ✅ | ✅ | ✅ | 🏅 Medium |
-| **Custom/Manual** | ✅ | ✅ | ✅ | 🏅 Low |
+
+### 🐧 **Linux Environments**
+| Environment | Multi-Version | Auto-Detection | Deep Scan | Priority |
+|-------------|---------------|----------------|-----------|----------|
+| **System PATH** | ✅ | ✅ | ✅ | 🥇 Highest |
+| **Ubuntu/Debian APT** | ✅ | ✅ | ✅ | 🥈 High |
+| **CentOS/RHEL YUM/DNF** | ✅ | ✅ | ✅ | 🥉 High |
+| **Homebrew** | ✅ | ✅ | ✅ | 🏅 Medium |
+| **Custom/Compiled** | ✅ | ✅ | ✅ | 🏅 Low |
+
+### 🍎 **macOS Environments**
+| Environment | Multi-Version | Auto-Detection | Deep Scan | Priority |
+|-------------|---------------|----------------|-----------|----------|
+| **System PATH** | ✅ | ✅ | ✅ | 🥇 Highest |
+| **Homebrew** | ✅ | ✅ | ✅ | 🥈 High |
+| **MAMP** | ✅ | ✅ | ✅ | 🥉 High |
+| **Custom/Compiled** | ✅ | ✅ | ✅ | 🏅 Low |
 
 ### 🔍 **Detection Methods**
 1. **System PATH Scanning** - Finds active PHP installations
@@ -57,25 +77,104 @@
 npm install -g php-ini-automation
 ```
 
+> 🎉 **After installation, you can use the short alias `pia` instead of `php-ini-automation`!**
+
 ### Local Installation
 
 ```bash
 npm install php-ini-automation
 ```
 
+## 🎯 Quick Reference
+
+### ⚡ **Essential Shortcuts**
+| Command | Description | Example |
+|---------|-------------|---------|
+| `pia` | Configure PHP (auto-detect) | `pia` |
+| `pia -l` | List all PHP installations | `pia -l` |
+| `pia -v` | Show version information | `pia -v` |
+| `pia -h` | Show help | `pia -h` |
+| `pia 8.2` | Configure specific PHP version | `pia 8.2` |
+
+### 🔥 **One-Liner Examples**
+```bash
+# Quick setup for Laravel development
+pia
+
+# Check what PHP versions are available
+pia -l
+
+# Configure PHP 8.2 specifically
+pia 8.2
+
+# Get help and see all options
+pia -h
+
+# Check tool version
+pia -v
+```
+
 ## Usage
+
+### 🚀 Quick Start Commands
+
+#### **⚡ Super Quick (Recommended)**
+```bash
+# Configure PHP (auto-detect)
+pia
+
+# List all PHP installations
+pia -l
+
+# Show version information
+pia -v
+
+# Show help
+pia -h
+
+# Configure specific PHP version
+pia 8.2
+```
+
+#### **📋 All Available Commands**
+```bash
+# Main commands
+php-ini-automation              # Auto-detect and configure PHP
+pia                             # Short alias (same as above)
+
+# Version-specific
+php-ini-automation 8.2          # Configure PHP 8.2
+pia 8.2                         # Short form
+
+# Information commands
+php-ini-automation --list       # List all detected installations
+pia -l                          # Short form
+
+php-ini-automation --version    # Show version information
+pia -v                          # Short form
+
+php-ini-automation --help       # Show help
+pia -h                          # Short form
+
+# Advanced options
+php-ini-automation --non-interactive  # Run without prompts
+pia --non-interactive           # Short form
+```
 
 ### Command Line Interface
 
 ```bash
 # Use default PHP version
 php-ini-automation
+pia                             # Short alias
 
 # Specify PHP version
 php-ini-automation 8.2
+pia 8.2                         # Short form
 
 # With environment variables
 LARAGON_PATH="C:/laragon" php-ini-automation 8.1
+LARAGON_PATH="C:/laragon" pia 8.1  # Short form
 ```
 
 ### Programmatic Usage

@@ -2,6 +2,86 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.0] - 2025-08-07 🌍
+
+### 🌟 **CROSS-PLATFORM REVOLUTION - UNIVERSAL PHP DETECTION**
+
+This release makes PHP INI Automation the **first truly universal PHP configuration tool** that works seamlessly across Windows, Linux, and macOS. **Complete cross-platform compatibility achieved!**
+
+#### 🚀 **Revolutionary Cross-Platform Features**
+
+- **🌍 Universal Operating System Support**
+  - **Windows**: Full support for all existing environments (Laragon, XAMPP, WAMP, PVM, etc.)
+  - **Linux**: Native support for Ubuntu/Debian APT, CentOS/RHEL YUM/DNF, Homebrew
+  - **macOS**: Complete support for Homebrew, MAMP, and custom installations
+  - **Docker/Container**: Automatic detection in containerized environments
+
+- **🔧 Cross-Platform Detection Engine**
+  - Smart executable detection (`php.exe` on Windows, `php` on Unix)
+  - Platform-specific path resolution and directory structures
+  - Cross-platform extension file detection (`.dll`, `.so`, `.dylib`)
+  - Universal command execution with proper error suppression
+
+- **📁 Intelligent Path Resolution**
+  - Windows: Registry scanning, environment variables, deep directory scanning
+  - Linux: Package manager paths, system directories, user installations
+  - macOS: Homebrew paths, system locations, user directories
+  - Universal: System PATH detection across all platforms
+
+#### 🛠️ **Enhanced Technical Features**
+
+- **🔍 Platform-Aware Detection Methods**
+  - Windows Registry integration for registered PHP installations
+  - Linux package manager integration (APT, YUM, DNF)
+  - macOS Homebrew Cellar scanning
+  - Universal system PATH detection with `where`/`which` commands
+
+- **📦 Cross-Platform Extension Management**
+  - Windows: `.dll` extension files in `ext/` directories
+  - Linux/Unix: `.so` extension files in various system paths
+  - macOS: `.dylib` and `.so` extension files
+  - Smart extension directory detection across all platforms
+
+- **⚙️ Universal Configuration Handling**
+  - Cross-platform php.ini path detection
+  - Platform-specific default configuration paths
+  - Universal backup and validation systems
+  - Cross-platform file permission handling
+
+#### 🎯 **New Platform-Specific Environments**
+
+##### **Linux Distributions**
+- **Ubuntu/Debian**: `/etc/php/`, `/usr/lib/php/`, APT package paths
+- **CentOS/RHEL**: `/etc/php.ini`, `/usr/lib64/php/`, YUM/DNF paths
+- **Generic Linux**: `/usr/local/`, `/opt/`, custom compilation paths
+
+##### **macOS Systems**
+- **Homebrew**: `/usr/local/Cellar/php/`, `/opt/homebrew/`
+- **System PHP**: `/usr/bin/`, `/usr/local/bin/`
+- **MAMP**: `/Applications/MAMP/`, custom installations
+
+##### **Container Environments**
+- **Docker**: `/usr/local/etc/php/`, `/etc/php/`
+- **Alpine Linux**: Lightweight container detection
+- **Custom containers**: Flexible path detection
+
+#### 🔧 **Cross-Platform CLI Enhancements**
+```bash
+# Works identically on all platforms
+php-ini-automation                    # Universal auto-detection
+php-ini-automation --list            # Cross-platform installation listing
+php-ini-automation 8.2               # Version-specific configuration
+php-ini-automation --help            # Platform-aware help system
+```
+
+#### 📊 **Universal Compatibility**
+- **Node.js**: 16+ on all platforms
+- **PHP**: 7.4+ on Windows, Linux, macOS
+- **Architectures**: x86, x64, ARM64 (Apple Silicon)
+- **Package Managers**: npm, yarn, pnpm (universal)
+
+---
+
 ## [3.0.0] - 2025-08-07 🚀
 
 ### 🎯 **REVOLUTIONARY RELEASE - UNBEATABLE PHP DETECTION**

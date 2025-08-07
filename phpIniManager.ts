@@ -14,36 +14,47 @@ const colors = {
 };
 
 /**
- * Validates that the source php.ini file exists and is readable.
+ * Validates that the source php.ini file exists and is readable (with sudo support).
  *
  * @param filePath - Path to the php.ini file.
+ * @param useSudo - Whether to use sudo for file operations.
  * @throws If the file does not exist or is not readable.
  */
-export function validateSourceFile(filePath: string): void {
+export function validateSourceFile(filePath: string, useSudo: boolean = false): void {
     if (!fs.existsSync(filePath)) {
         throw new Error(`php.ini file not found at: ${filePath}`);
     }
 
     try {
-        fs.accessSync(filePath, fs.constants.R_OK | fs.constants.W_OK);
+        // Try normal read access first
+        fs.accessSync(filePath, fs.constants.R_OK);
     } catch {
-        throw new Error(`php.ini file is not readable/writable: ${filePath}`);
+        if (useSudo && process.platform !== 'win32') {
+            // On Unix with sudo, we can still proceed
+            console.log(`${colors.yellow}ℹ️  File requires elevated permissions - will use sudo for operations${colors.reset}`);
+            return;
+        }
+        throw new Error(`php.ini file is not readable: ${filePath}`);
     }
 
     console.log(`${colors.green}✅ php.ini file validated: ${filePath}${colors.reset}`);
 }
 
 /**
- * Checks if an extension file exists in the extensions directory
+ * Checks if an extension file exists in the extensions directory (cross-platform)
  */
 function extensionExists(extensionDir: string, extension: string): boolean {
     if (!extensionDir) return false;
 
-    const possibleExtensions = [
+    const isWindows = process.platform === 'win32';
+    const possibleExtensions = isWindows ? [
         `php_${extension}.dll`,
-        `${extension}.dll`,
+        `${extension}.dll`
+    ] : [
+        `${extension}.so`,
         `php_${extension}.so`,
-        `${extension}.so`
+        `${extension}.dylib`, // macOS
+        `lib${extension}.so`
     ];
 
     return possibleExtensions.some(ext =>
@@ -164,15 +175,22 @@ function addCustomSettings(content: string, settings: Record<string, string | nu
 }
 
 /**
- * Creates a backup of the original php.ini file
+ * Creates a backup of the original php.ini file with sudo support
  */
-async function createBackup(filePath: string): Promise<string> {
+async function createBackup(filePath: string, useSudo: boolean = false): Promise<string> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupPath = `${filePath}.backup.${timestamp}`;
 
     try {
-        await fs.copy(filePath, backupPath);
-        console.log(`${colors.cyan}📋 Backup created: ${backupPath}${colors.reset}`);
+        if (useSudo && process.platform !== 'win32') {
+            // Use sudo for backup on Unix systems
+            const { execSync } = require('child_process');
+            execSync(`sudo cp "${filePath}" "${backupPath}"`, { stdio: 'inherit' });
+            console.log(`${colors.cyan}📋 Backup created with sudo: ${backupPath}${colors.reset}`);
+        } else {
+            await fs.copy(filePath, backupPath);
+            console.log(`${colors.cyan}📋 Backup created: ${backupPath}${colors.reset}`);
+        }
         return backupPath;
     } catch (error: any) {
         console.log(`${colors.yellow}⚠️  Could not create backup: ${error.message}${colors.reset}`);
@@ -181,16 +199,63 @@ async function createBackup(filePath: string): Promise<string> {
 }
 
 /**
- * Enhanced PHP ini customization with detailed feedback and better error handling.
+ * Reads file with sudo support on Unix systems
+ */
+async function readFileWithSudo(filePath: string, useSudo: boolean = false): Promise<string> {
+    if (useSudo && process.platform !== 'win32') {
+        // Use sudo to read file on Unix systems
+        const { execSync } = require('child_process');
+        try {
+            const result = execSync(`sudo cat "${filePath}"`, {
+                encoding: 'utf8',
+                stdio: ['pipe', 'pipe', 'ignore']
+            });
+            return result;
+        } catch (error) {
+            // Fallback to normal read
+            return await fs.readFile(filePath, 'utf8');
+        }
+    } else {
+        // Regular file read
+        return await fs.readFile(filePath, 'utf8');
+    }
+}
+
+/**
+ * Writes file with sudo support on Unix systems
+ */
+async function writeFileWithSudo(filePath: string, content: string, useSudo: boolean = false): Promise<void> {
+    if (useSudo && process.platform !== 'win32') {
+        // Use sudo to write file on Unix systems
+        const { execSync } = require('child_process');
+        const tempFile = `/tmp/php-ini-automation-${Date.now()}.tmp`;
+
+        // Write to temp file first
+        await fs.writeFile(tempFile, content, 'utf8');
+
+        // Move with sudo
+        execSync(`sudo mv "${tempFile}" "${filePath}"`, { stdio: 'inherit' });
+        console.log(`${colors.green}✅ php.ini updated with sudo${colors.reset}`);
+    } else {
+        // Regular file write
+        await fs.writeFile(filePath, content, 'utf8');
+        console.log(`${colors.green}✅ php.ini updated${colors.reset}`);
+    }
+}
+
+/**
+ * Enhanced PHP ini customization with detailed feedback and automatic sudo handling.
  *
  * @param filePath - Path to the php.ini file to be customized.
  * @param extensionsDir - Directory containing PHP extensions.
  * @param customSettings - Key-value pairs of additional php.ini settings to add/update.
+ * @param useSudo - Whether to use sudo for file operations (auto-detected on Unix).
  */
 export async function customizePhpIni(
     filePath: string,
     extensionsDir: string,
-    customSettings: Record<string, string | number> = {}
+    customSettings: Record<string, string | number> = {},
+    useSudo: boolean = false
 ): Promise<void> {
     console.log(`${colors.bright}🔧 Customizing php.ini...${colors.reset}`);
 
@@ -266,10 +331,10 @@ export async function customizePhpIni(
     const mergedSettings = { ...DEFAULT_SETTINGS, ...customSettings };
 
     try {
-        // Create backup
-        await createBackup(filePath);
+        // Create backup with sudo support
+        await createBackup(filePath, useSudo);
 
-        let content = await fs.readFile(filePath, 'utf8');
+        let content = await readFileWithSudo(filePath, useSudo);
         console.log(`${colors.green}✅ php.ini file loaded (${content.length} bytes)${colors.reset}`);
 
         // Update extension_dir if provided
@@ -334,9 +399,8 @@ export async function customizePhpIni(
             console.log(`${colors.green}✅ Added settings: ${settingsResult.added.join(', ')}${colors.reset}`);
         }
 
-        // Save updated php.ini
-        await fs.writeFile(filePath, content, 'utf8');
-        console.log(`${colors.green}${colors.bright}✅ php.ini successfully updated!${colors.reset}`);
+        // Save updated php.ini with sudo support
+        await writeFileWithSudo(filePath, content, useSudo);
 
         // Summary
         console.log(`\n${colors.bright}📊 Configuration Summary:${colors.reset}`);
