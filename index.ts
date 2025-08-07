@@ -1,33 +1,254 @@
-import { determinePhpIniPaths } from './phpEnvironmentUtils.js';
-import { validateSourceFile, customizePhpIni } from './phpIniManager.js';
+#!/usr/bin/env node
+
+import { createInterface } from 'readline';
+import { determinePhpIniPaths, PhpInstallation, scanPhpInstallations } from './phpEnvironmentUtils.js';
+import { customizePhpIni, validateSourceFile } from './phpIniManager.js';
+
+// ANSI color codes for better CLI experience
+const colors = {
+    reset: '\x1b[0m',
+    bright: '\x1b[1m',
+    red: '\x1b[31m',
+    green: '\x1b[32m',
+    yellow: '\x1b[33m',
+    blue: '\x1b[34m',
+    magenta: '\x1b[35m',
+    cyan: '\x1b[36m',
+    white: '\x1b[37m'
+};
 
 /**
- * Updates the php.ini configuration for the specified PHP version.
- *
- * @param {string} version - PHP version to update for (default: '').
+ * Displays a formatted header
  */
-async function updatePhpIni(version = '') {
-    console.log(`Starting php.ini update for PHP version: ${version || 'default'}`);
+function displayHeader(): void {
+    console.log(`${colors.cyan}${colors.bright}`);
+    console.log('╔══════════════════════════════════════════════════════════════╗');
+    console.log('║                    PHP INI AUTOMATION                       ║');
+    console.log('║              Professional PHP Configuration Tool             ║');
+    console.log('╚══════════════════════════════════════════════════════════════╝');
+    console.log(`${colors.reset}\n`);
+}
+
+/**
+ * Displays detected PHP installations in a formatted table
+ */
+function displayPhpInstallations(installations: PhpInstallation[]): void {
+    console.log(`${colors.bright}${colors.green}✅ Found ${installations.length} PHP installation(s):${colors.reset}\n`);
+
+    console.log(`${colors.bright}┌─────┬─────────────┬──────────────────┬─────────────────────────────────────────────────┐${colors.reset}`);
+    console.log(`${colors.bright}│ No. │   Version   │   Environment    │                    Path                         │${colors.reset}`);
+    console.log(`${colors.bright}├─────┼─────────────┼──────────────────┼─────────────────────────────────────────────────┤${colors.reset}`);
+
+    installations.forEach((installation, index) => {
+        const num = (index + 1).toString().padStart(3);
+        const version = installation.version.padEnd(11);
+        const env = installation.environment.padEnd(16);
+        const installPath = installation.path.length > 45 ?
+            '...' + installation.path.slice(-42) :
+            installation.path.padEnd(45);
+
+        console.log(`${colors.bright}│ ${num} │ ${colors.yellow}${version}${colors.reset}${colors.bright} │ ${colors.cyan}${env}${colors.reset}${colors.bright} │ ${colors.white}${installPath}${colors.reset}${colors.bright} │${colors.reset}`);
+    });
+
+    console.log(`${colors.bright}└─────┴─────────────┴──────────────────┴─────────────────────────────────────────────────┘${colors.reset}\n`);
+}
+
+/**
+ * Prompts user to select a PHP installation
+ */
+async function selectPhpInstallation(installations: PhpInstallation[]): Promise<PhpInstallation> {
+    return new Promise((resolve) => {
+        const rl = createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+
+        const prompt = `${colors.bright}${colors.blue}Select PHP installation (1-${installations.length}) or press Enter for #1: ${colors.reset}`;
+
+        rl.question(prompt, (answer) => {
+            rl.close();
+
+            const selection = answer.trim();
+            let index = 0;
+
+            if (selection) {
+                const num = parseInt(selection);
+                if (num >= 1 && num <= installations.length) {
+                    index = num - 1;
+                } else {
+                    console.log(`${colors.yellow}⚠️  Invalid selection. Using first installation.${colors.reset}\n`);
+                }
+            }
+
+            resolve(installations[index]);
+        });
+    });
+}
+
+/**
+ * Enhanced PHP ini update function with better UX
+ */
+async function updatePhpIni(version: string = '', interactive: boolean = true): Promise<void> {
+    displayHeader();
+
+    console.log(`${colors.bright}🔍 Scanning for PHP installations...${colors.reset}`);
 
     try {
-        const { iniPath, extensionDir } = determinePhpIniPaths(version);
+        const installations = scanPhpInstallations();
 
-        console.log(`php.ini path: ${iniPath}`);
-        console.log(`Extensions directory: ${extensionDir}`);
+        if (installations.length === 0) {
+            console.log(`${colors.red}${colors.bright}❌ No PHP installations found!${colors.reset}\n`);
+            console.log(`${colors.yellow}💡 Suggestions:${colors.reset}`);
+            console.log('   • Install PHP using Laragon, XAMPP, or WAMP');
+            console.log('   • Set environment variables: LARAGON_PATH, XAMPP_PATH, WAMP_PATH');
+            console.log('   • Install PHP manually to C:/php');
+            console.log('   • Use: php-ini-automation --help for more options\n');
+            process.exit(1);
+        }
 
-        validateSourceFile(iniPath); // Validate if the file exists
-        await customizePhpIni(iniPath, extensionDir);
+        displayPhpInstallations(installations);
 
-        console.log(`php.ini for PHP version ${version || 'default'} has been successfully customized!`);
-    } catch (error) {
-        console.error("Failed to update php.ini:", error.message);
+        let selectedInstallation: PhpInstallation;
+
+        if (version) {
+            // Find specific version
+            const matching = installations.find(inst =>
+                inst.version.startsWith(version) ||
+                inst.version.includes(version) ||
+                inst.path.includes(version)
+            );
+
+            if (matching) {
+                selectedInstallation = matching;
+                console.log(`${colors.green}✅ Found matching PHP ${version}: ${matching.environment} (${matching.version})${colors.reset}\n`);
+            } else {
+                console.log(`${colors.yellow}⚠️  PHP ${version} not found. Available installations:${colors.reset}\n`);
+                selectedInstallation = interactive ? await selectPhpInstallation(installations) : installations[0];
+            }
+        } else {
+            // Interactive selection or use first
+            selectedInstallation = interactive && process.stdin.isTTY ?
+                await selectPhpInstallation(installations) :
+                installations[0];
+        }
+
+        console.log(`${colors.bright}🎯 Selected: ${colors.green}${selectedInstallation.environment} PHP ${selectedInstallation.version}${colors.reset}`);
+        console.log(`${colors.bright}📁 INI Path: ${colors.white}${selectedInstallation.iniPath}${colors.reset}`);
+        console.log(`${colors.bright}📂 Extensions: ${colors.white}${selectedInstallation.extensionDir}${colors.reset}\n`);
+
+        console.log(`${colors.bright}🔧 Validating and customizing php.ini...${colors.reset}`);
+
+        validateSourceFile(selectedInstallation.iniPath);
+        await customizePhpIni(selectedInstallation.iniPath, selectedInstallation.extensionDir);
+
+        console.log(`\n${colors.green}${colors.bright}🎉 SUCCESS! PHP configuration updated successfully!${colors.reset}`);
+        console.log(`${colors.bright}📋 Summary:${colors.reset}`);
+        console.log(`   • Environment: ${selectedInstallation.environment}`);
+        console.log(`   • PHP Version: ${selectedInstallation.version}`);
+        console.log(`   • Extensions enabled for Laravel development`);
+        console.log(`   • Performance settings optimized\n`);
+
+    } catch (error: any) {
+        console.log(`\n${colors.red}${colors.bright}❌ Error: ${error.message}${colors.reset}\n`);
+
+        if (error.message.includes('not found')) {
+            console.log(`${colors.yellow}💡 Troubleshooting:${colors.reset}`);
+            console.log('   • Check if the php.ini file exists');
+            console.log('   • Verify PHP installation is complete');
+            console.log('   • Try running as administrator');
+        }
+
+        process.exit(1);
     }
 }
 
-// Command-line arguments
-const phpVersion = process.argv[2] || ''; // Use default PHP version if none is provided
+/**
+ * Displays help information
+ */
+function displayHelp(): void {
+    console.log(`${colors.cyan}${colors.bright}PHP INI Automation - Professional PHP Configuration Tool${colors.reset}\n`);
 
-console.log(`PHP Version specified: ${phpVersion || 'default'}`);
+    console.log(`${colors.bright}USAGE:${colors.reset}`);
+    console.log('  php-ini-automation [version] [options]\n');
 
-// Execute the update
-updatePhpIni(phpVersion);
+    console.log(`${colors.bright}EXAMPLES:${colors.reset}`);
+    console.log('  php-ini-automation              # Auto-detect and configure PHP');
+    console.log('  php-ini-automation 8.2          # Configure specific PHP version');
+    console.log('  php-ini-automation --list       # List all detected PHP installations');
+    console.log('  php-ini-automation --help       # Show this help\n');
+
+    console.log(`${colors.bright}OPTIONS:${colors.reset}`);
+    console.log('  --list, -l     List all detected PHP installations');
+    console.log('  --help, -h     Show this help message');
+    console.log('  --non-interactive  Run without user prompts\n');
+
+    console.log(`${colors.bright}ENVIRONMENT VARIABLES:${colors.reset}`);
+    console.log('  LARAGON_PATH   Path to Laragon installation (e.g., C:/laragon)');
+    console.log('  XAMPP_PATH     Path to XAMPP installation (e.g., C:/xampp)');
+    console.log('  WAMP_PATH      Path to WAMP installation (e.g., C:/wamp64)');
+    console.log('  PVM_PATH       Path to PVM installation (e.g., C:/tools/php)');
+    console.log('  DEFAULT_PATH   Path to custom PHP installation (e.g., C:/php)\n');
+
+    console.log(`${colors.bright}FEATURES:${colors.reset}`);
+    console.log('  ✅ Auto-detects PHP installations (Laragon, XAMPP, WAMP, PVM)');
+    console.log('  ✅ Enables Laravel-required extensions');
+    console.log('  ✅ Optimizes performance settings');
+    console.log('  ✅ Supports multiple PHP versions');
+    console.log('  ✅ Interactive selection interface\n');
+}
+
+/**
+ * Lists all detected PHP installations
+ */
+async function listInstallations(): Promise<void> {
+    displayHeader();
+    console.log(`${colors.bright}🔍 Scanning for PHP installations...${colors.reset}\n`);
+
+    const installations = scanPhpInstallations();
+
+    if (installations.length === 0) {
+        console.log(`${colors.red}❌ No PHP installations found.${colors.reset}\n`);
+        console.log(`${colors.yellow}💡 Install PHP using Laragon, XAMPP, WAMP, or manually.${colors.reset}`);
+        return;
+    }
+
+    displayPhpInstallations(installations);
+
+    console.log(`${colors.bright}📋 Installation Details:${colors.reset}\n`);
+    installations.forEach((installation, index) => {
+        console.log(`${colors.bright}${colors.cyan}[${index + 1}] ${installation.environment} PHP ${installation.version}${colors.reset}`);
+        console.log(`    📁 Path: ${installation.path}`);
+        console.log(`    📄 INI: ${installation.iniPath}`);
+        console.log(`    📂 Extensions: ${installation.extensionDir}`);
+        console.log(`    🔧 Executable: ${installation.phpExecutable || 'Not found'}\n`);
+    });
+}
+
+// Export for programmatic use
+export { customizePhpIni, determinePhpIniPaths, scanPhpInstallations, updatePhpIni, validateSourceFile };
+
+// CLI execution - check if this file is being run directly
+const isMainModule = process.argv[1] && (
+    process.argv[1].endsWith('index.js') ||
+    process.argv[1].endsWith('index.ts') ||
+    process.argv[1].includes('php-ini-automation')
+);
+
+if (isMainModule) {
+    const args = process.argv.slice(2);
+    const hasHelp = args.includes('--help') || args.includes('-h');
+    const hasList = args.includes('--list') || args.includes('-l');
+    const nonInteractive = args.includes('--non-interactive');
+
+    // Filter out flags to get version
+    const phpVersion = args.find(arg => !arg.startsWith('--') && !arg.startsWith('-')) || '';
+
+    if (hasHelp) {
+        displayHelp();
+    } else if (hasList) {
+        listInstallations().catch(console.error);
+    } else {
+        // Execute the update
+        updatePhpIni(phpVersion, !nonInteractive).catch(console.error);
+    }
+}

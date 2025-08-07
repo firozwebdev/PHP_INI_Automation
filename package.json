@@ -1,18 +1,60 @@
 {
-  "name": "ini-automation",
-  "module": "index.ts",
+  "name": "php-ini-automation",
+  "description": "Automated PHP ini configuration tool for Laravel and other PHP projects across multiple environments (Laragon, XAMPP, WAMP, PVM)",
+  "version": "2.0.0",
   "type": "module",
-  "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "php-ini-automation": "dist/index.js"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "bun run index.ts"
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js",
+    "clean": "rimraf dist",
+    "prepublishOnly": "npm run clean && npm run build",
+    "test": "node test.js",
+    "list": "node dist/index.js --list",
+    "help": "node dist/index.js --help",
+    "scan": "node dist/index.js --list"
+  },
+  "keywords": [
+    "php",
+    "ini",
+    "configuration",
+    "laravel",
+    "automation",
+    "xampp",
+    "laragon",
+    "wamp",
+    "pvm",
+    "php-extensions"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/php-ini-automation.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/php-ini-automation/issues"
+  },
+  "homepage": "https://github.com/yourusername/php-ini-automation#readme",
+  "engines": {
+    "node": ">=16.0.0"
   },
   "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
+    "@types/node": "^20.0.0",
+    "@types/fs-extra": "^11.0.0",
+    "typescript": "^5.0.0",
+    "rimraf": "^5.0.0"
   },
   "dependencies": {
     "fs-extra": "^11.2.0"
