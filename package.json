@@ -1,7 +1,7 @@
 {
   "name": "php-ini-automation",
   "description": "Automated PHP ini configuration tool for Laravel and other PHP projects across multiple environments (Laragon, XAMPP, WAMP, PVM)",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",

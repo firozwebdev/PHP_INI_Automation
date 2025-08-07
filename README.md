@@ -1,28 +1,53 @@
-# PHP INI Automation
+# PHP INI Automation v3.0 🚀
 
-🚀 **Automated PHP ini configuration tool for Laravel and other PHP projects across multiple environments**
+**The Ultimate PHP Configuration Tool - Intelligent, Powerful, Unbeatable**
 
 [![npm version](https://badge.fury.io/js/php-ini-automation.svg)](https://badge.fury.io/js/php-ini-automation)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Downloads](https://img.shields.io/npm/dm/php-ini-automation.svg)](https://npmjs.org/package/php-ini-automation)
 
-## Features
+> **Revolutionary PHP detection and configuration tool that automatically finds and configures ALL your PHP installations across ANY environment. From Laragon to XAMPP, PVM to WAMP - we detect them all!**
 
-- ✅ **Multi-Environment Support**: Works with Laragon, XAMPP, WAMP, and PVM
-- ✅ **Laravel Ready**: Automatically enables all required Laravel extensions
-- ✅ **Version Specific**: Supports different PHP versions
-- ✅ **Smart Detection**: Automatically finds your PHP installation
-- ✅ **Customizable**: Add your own PHP settings
-- ✅ **TypeScript**: Full TypeScript support with type definitions
+## 🌟 Revolutionary Features
 
-## Supported Environments
+### 🔍 **Intelligent Detection System**
+- **🎯 Multi-Method Detection**: System PATH, Windows Registry, Deep Scanning, Environment Variables
+- **🏗️ Universal Environment Support**: Laragon, XAMPP, WAMP, PVM, MAMP, Uniform Server, Bitnami, Custom
+- **🔄 Multi-Version Detection**: Automatically finds ALL PHP versions in each environment
+- **📊 Comprehensive Analysis**: Architecture, Thread Safety, Build Date, Configuration details
 
-| Environment | Support | Path Detection |
-|-------------|---------|----------------|
-| **Laragon** | ✅ | `LARAGON_PATH` env var |
-| **XAMPP** | ✅ | `XAMPP_PATH` env var |
-| **WAMP** | ✅ | `WAMP_PATH` env var |
-| **PVM** | ✅ | `PVM_PATH` env var |
-| **Custom** | ✅ | `DEFAULT_PATH` env var |
+### ⚡ **Professional CLI Experience**
+- **🎨 Beautiful Interface**: Colored output, formatted tables, progress indicators
+- **🤖 Interactive Selection**: Choose from detected installations with smart defaults
+- **📋 Detailed Reporting**: Real-time feedback on extensions and settings
+- **🛡️ Validation System**: Pre-flight checks and troubleshooting suggestions
+
+### 🚀 **Advanced Configuration**
+- **📦 Smart Extension Management**: Validates extension files before enabling
+- **⚙️ Laravel-Optimized Settings**: Performance, security, and development settings
+- **💾 Automatic Backup**: Timestamped backups before any changes
+- **🔧 Custom Settings Support**: Add your own PHP configurations
+
+## 🏗️ Supported Environments
+
+| Environment | Multi-Version | Auto-Detection | Deep Scan | Priority |
+|-------------|---------------|----------------|-----------|----------|
+| **System PATH** | ✅ | ✅ | ✅ | 🥇 Highest |
+| **Laragon** | ✅ | ✅ | ✅ | 🥈 High |
+| **PVM** | ✅ | ✅ | ✅ | 🥉 High |
+| **WAMP/WAMP64** | ✅ | ✅ | ✅ | 🏅 Medium |
+| **XAMPP** | ✅ | ✅ | ✅ | 🏅 Medium |
+| **MAMP** | ✅ | ✅ | ✅ | 🏅 Medium |
+| **Uniform Server** | ✅ | ✅ | ✅ | 🏅 Medium |
+| **Bitnami** | ✅ | ✅ | ✅ | 🏅 Medium |
+| **Custom/Manual** | ✅ | ✅ | ✅ | 🏅 Low |
+
+### 🔍 **Detection Methods**
+1. **System PATH Scanning** - Finds active PHP installations
+2. **Windows Registry** - Discovers registered PHP installations
+3. **Environment Variables** - Respects manual configurations
+4. **Deep Directory Scanning** - Recursively searches common paths
+5. **Intelligent Pattern Matching** - Recognizes PHP directory structures
 
 ## Installation
 

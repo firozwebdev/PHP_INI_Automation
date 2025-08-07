@@ -295,10 +295,14 @@ export async function customizePhpIni(
         const optionalResult = enableExtensions(content, OPTIONAL_EXTENSIONS, extensionsDir);
         content = optionalResult.content;
 
-        // Report extension results
+        // Report extension results with better categorization
         const totalEnabled = extensionResult.enabled.concat(optionalResult.enabled);
         const totalMissing = extensionResult.missing.concat(optionalResult.missing);
         const totalAlreadyEnabled = extensionResult.alreadyEnabled.concat(optionalResult.alreadyEnabled);
+
+        // Separate essential vs optional missing extensions
+        const essentialMissing = extensionResult.missing;
+        const optionalMissing = optionalResult.missing;
 
         if (totalEnabled.length > 0) {
             console.log(`${colors.green}✅ Enabled extensions: ${totalEnabled.join(', ')}${colors.reset}`);
@@ -308,8 +312,13 @@ export async function customizePhpIni(
             console.log(`${colors.cyan}ℹ️  Already enabled: ${totalAlreadyEnabled.join(', ')}${colors.reset}`);
         }
 
-        if (totalMissing.length > 0) {
-            console.log(`${colors.yellow}⚠️  Missing extension files: ${totalMissing.join(', ')}${colors.reset}`);
+        if (essentialMissing.length > 0) {
+            console.log(`${colors.yellow}⚠️  Missing Laravel extensions: ${essentialMissing.join(', ')}${colors.reset}`);
+            console.log(`${colors.yellow}   💡 These are required for Laravel - consider installing them${colors.reset}`);
+        }
+
+        if (optionalMissing.length > 0) {
+            console.log(`${colors.cyan}ℹ️  Optional extensions not found: ${optionalMissing.join(', ')}${colors.reset}`);
         }
 
         // Add or update custom settings

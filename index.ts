@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
+import fs from 'fs-extra';
 import { createInterface } from 'readline';
-import { determinePhpIniPaths, PhpInstallation, scanPhpInstallations } from './phpEnvironmentUtils.js';
+import { determinePhpIniPaths, PhpInstallation, scanPhpInstallations, validatePhpInstallation } from './phpEnvironmentUtils.js';
 import { customizePhpIni, validateSourceFile } from './phpIniManager.js';
 
 // ANSI color codes for better CLI experience
@@ -30,14 +31,14 @@ function displayHeader(): void {
 }
 
 /**
- * Displays detected PHP installations in a formatted table
+ * Displays detected PHP installations in an enhanced formatted table
  */
 function displayPhpInstallations(installations: PhpInstallation[]): void {
     console.log(`${colors.bright}${colors.green}✅ Found ${installations.length} PHP installation(s):${colors.reset}\n`);
 
-    console.log(`${colors.bright}┌─────┬─────────────┬──────────────────┬─────────────────────────────────────────────────┐${colors.reset}`);
-    console.log(`${colors.bright}│ No. │   Version   │   Environment    │                    Path                         │${colors.reset}`);
-    console.log(`${colors.bright}├─────┼─────────────┼──────────────────┼─────────────────────────────────────────────────┤${colors.reset}`);
+    console.log(`${colors.bright}┌─────┬─────────────┬──────────────────┬─────────────────────────────────────────────────┬────────┐${colors.reset}`);
+    console.log(`${colors.bright}│ No. │   Version   │   Environment    │                    Path                         │ Status │${colors.reset}`);
+    console.log(`${colors.bright}├─────┼─────────────┼──────────────────┼─────────────────────────────────────────────────┼────────┤${colors.reset}`);
 
     installations.forEach((installation, index) => {
         const num = (index + 1).toString().padStart(3);
@@ -47,10 +48,36 @@ function displayPhpInstallations(installations: PhpInstallation[]): void {
             '...' + installation.path.slice(-42) :
             installation.path.padEnd(45);
 
-        console.log(`${colors.bright}│ ${num} │ ${colors.yellow}${version}${colors.reset}${colors.bright} │ ${colors.cyan}${env}${colors.reset}${colors.bright} │ ${colors.white}${installPath}${colors.reset}${colors.bright} │${colors.reset}`);
+        // Status indicators
+        let status = '';
+        if (installation.isActive) {
+            status = `${colors.green}ACTIVE${colors.reset}`;
+        } else if (installation.iniPath && fs.existsSync(installation.iniPath)) {
+            status = `${colors.cyan}READY${colors.reset} `;
+        } else {
+            status = `${colors.yellow}NEEDS${colors.reset} `;
+        }
+
+        console.log(`${colors.bright}│ ${num} │ ${colors.yellow}${version}${colors.reset}${colors.bright} │ ${colors.cyan}${env}${colors.reset}${colors.bright} │ ${colors.white}${installPath}${colors.reset}${colors.bright} │ ${status}${colors.bright} │${colors.reset}`);
+
+        // Show additional info for detailed view
+        if (installation.architecture || installation.threadSafety !== undefined) {
+            const arch = installation.architecture ? ` ${installation.architecture}` : '';
+            const ts = installation.threadSafety !== undefined ?
+                (installation.threadSafety ? ' TS' : ' NTS') : '';
+            const details = `${arch}${ts}`.trim();
+
+            if (details) {
+                console.log(`${colors.bright}│     │             │                  │ ${colors.white}${details.padEnd(45)}${colors.reset}${colors.bright} │        │${colors.reset}`);
+            }
+        }
     });
 
-    console.log(`${colors.bright}└─────┴─────────────┴──────────────────┴─────────────────────────────────────────────────┘${colors.reset}\n`);
+    console.log(`${colors.bright}└─────┴─────────────┴──────────────────┴─────────────────────────────────────────────────┴────────┘${colors.reset}\n`);
+
+    // Show legend
+    console.log(`${colors.bright}Legend:${colors.reset} ${colors.green}ACTIVE${colors.reset} = In system PATH, ${colors.cyan}READY${colors.reset} = Configured, ${colors.yellow}NEEDS${colors.reset} = Needs setup`);
+    console.log(`${colors.bright}Info:${colors.reset} TS = Thread Safe, NTS = Non-Thread Safe\n`);
 }
 
 /**
@@ -134,9 +161,38 @@ async function updatePhpIni(version: string = '', interactive: boolean = true): 
 
         console.log(`${colors.bright}🎯 Selected: ${colors.green}${selectedInstallation.environment} PHP ${selectedInstallation.version}${colors.reset}`);
         console.log(`${colors.bright}📁 INI Path: ${colors.white}${selectedInstallation.iniPath}${colors.reset}`);
-        console.log(`${colors.bright}📂 Extensions: ${colors.white}${selectedInstallation.extensionDir}${colors.reset}\n`);
+        console.log(`${colors.bright}📂 Extensions: ${colors.white}${selectedInstallation.extensionDir}${colors.reset}`);
+        console.log(`${colors.bright}🔧 Executable: ${colors.white}${selectedInstallation.phpExecutable}${colors.reset}`);
 
-        console.log(`${colors.bright}🔧 Validating and customizing php.ini...${colors.reset}`);
+        // Show additional details
+        if (selectedInstallation.architecture) {
+            console.log(`${colors.bright}🏗️  Architecture: ${colors.white}${selectedInstallation.architecture}${colors.reset}`);
+        }
+        if (selectedInstallation.threadSafety !== undefined) {
+            const tsStatus = selectedInstallation.threadSafety ? 'Thread Safe' : 'Non-Thread Safe';
+            console.log(`${colors.bright}🧵 Thread Safety: ${colors.white}${tsStatus}${colors.reset}`);
+        }
+        console.log('');
+
+        // Validate installation before proceeding
+        console.log(`${colors.bright}🔍 Validating PHP installation...${colors.reset}`);
+        const validation = validatePhpInstallation(selectedInstallation);
+
+        if (!validation.isValid) {
+            console.log(`${colors.red}❌ Installation validation failed:${colors.reset}`);
+            validation.issues.forEach(issue => {
+                console.log(`   • ${colors.red}${issue}${colors.reset}`);
+            });
+            console.log(`\n${colors.yellow}💡 Suggestions:${colors.reset}`);
+            validation.suggestions.forEach(suggestion => {
+                console.log(`   • ${suggestion}`);
+            });
+            console.log('');
+            process.exit(1);
+        }
+
+        console.log(`${colors.green}✅ Installation validation passed${colors.reset}`);
+        console.log(`${colors.bright}🔧 Customizing php.ini configuration...${colors.reset}`);
 
         validateSourceFile(selectedInstallation.iniPath);
         await customizePhpIni(selectedInstallation.iniPath, selectedInstallation.extensionDir);
