@@ -1,7 +1,7 @@
 {
   "name": "php-ini-automation",
   "description": "Ultimate Laravel-optimized PHP configuration tool that automatically detects and configures PHP installations across all environments with Laravel 10+ specific extensions, performance settings, and security configurations",
-  "version": "5.0.6",
+  "version": "5.0.8",
   "type": "commonjs",
   "main": "dist/index.js",
   "module": "dist/index.js",

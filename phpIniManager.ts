@@ -111,12 +111,26 @@ function isExtensionPackageInstalled(extension: string): boolean {
     try {
         const { execSync } = require('child_process');
 
-        // Check if the extension package is installed
-        execSync(`dpkg -l | grep -q "^ii.*php-${extension}"`, {
-            stdio: 'ignore',
-            timeout: 3000
-        });
-        return true;
+        // Check multiple possible package names for PHP 8.2
+        const possiblePackages = [
+            `php8.2-${extension}`,
+            `php-${extension}`
+        ];
+
+        for (const packageName of possiblePackages) {
+            try {
+                execSync(`dpkg -l | grep -q "^ii.*${packageName}"`, {
+                    stdio: 'ignore',
+                    timeout: 3000
+                });
+                return true;
+            } catch {
+                // Try next package name
+                continue;
+            }
+        }
+
+        return false;
     } catch {
         // Package not installed
         return false;
@@ -277,6 +291,8 @@ function enableExtensions(content: string, extensions: string[], extensionDir: s
             canEnable = isExtensionPackageInstalled(extension);
             if (!canEnable) {
                 console.log(`${colors.yellow}⚠️  Skipping ${extension}: package php-${extension} not installed${colors.reset}`);
+                missing.push(extension);
+                return;
             }
         } else {
             // On Windows, check if extension file exists
@@ -631,6 +647,36 @@ export async function customizePhpIni(
             if (wrongPattern.test(content)) {
                 content = content.replace(wrongPattern, `zend_extension=${ext}`);
                 console.log(`${colors.green}🔧 Fixed ${ext}: converted extension= to zend_extension=${colors.reset}`);
+            }
+        }
+
+        // On Linux, aggressively clean up extensions without packages
+        if (process.platform !== 'win32') {
+            const allExtensions = [...ESSENTIAL_EXTENSIONS, ...OPTIONAL_EXTENSIONS];
+            let cleanedCount = 0;
+
+            for (const ext of allExtensions) {
+                if (!isExtensionPackageInstalled(ext)) {
+                    const patterns = [
+                        new RegExp(`^\\s*extension\\s*=\\s*${ext}\\s*$`, 'gm'),
+                        new RegExp(`^\\s*zend_extension\\s*=\\s*${ext}\\s*$`, 'gm')
+                    ];
+
+                    for (const pattern of patterns) {
+                        if (pattern.test(content)) {
+                            content = content.replace(pattern, `;extension=${ext} ; Disabled - package not installed`);
+                            cleanedCount++;
+                        }
+                    }
+                }
+            }
+
+            if (cleanedCount > 0) {
+                console.log(`${colors.green}🧹 Cleaned up ${cleanedCount} extensions without packages${colors.reset}`);
+
+                // Save the cleanup immediately to prevent re-enabling
+                await writeFileWithSudo(filePath, content, true);
+                console.log(`${colors.green}💾 Cleanup changes saved immediately${colors.reset}`);
             }
         }
 

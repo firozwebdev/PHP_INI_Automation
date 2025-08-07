@@ -250,7 +250,7 @@ async function updatePhpIni(version: string = '', interactive: boolean = true): 
  * Displays version information
  */
 function displayVersion(): void {
-    const version = '5.0.6'; // Current version
+    const version = '5.0.8'; // Current version
     console.log(`${colors.bright}PHP INI Automation${colors.reset} v${colors.green}${version}${colors.reset}`);
     console.log(`${colors.cyan}Cross-platform PHP configuration tool${colors.reset}\n`);
 
