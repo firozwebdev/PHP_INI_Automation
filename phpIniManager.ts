@@ -78,12 +78,13 @@ function extensionExists(extensionDir: string, extension: string): boolean {
 function isBuiltInOrAvailableExtension(extension: string): boolean {
     const builtInExtensions = [
         'ctype', 'fileinfo', 'tokenizer', 'json', 'pcre', 'spl', 'standard',
-        'date', 'hash', 'filter', 'reflection', 'session', 'xml'
+        'date', 'hash', 'filter', 'reflection', 'session', 'xml', 'exif',
+        'openssl', 'ftp' // These are often built-in
     ];
 
-    // Check if it's a built-in extension
+    // Check if it's a built-in extension (don't enable these)
     if (builtInExtensions.includes(extension)) {
-        return true;
+        return false; // Return false so we don't try to enable built-ins
     }
 
     // Check if extension package is installed via apt
@@ -99,6 +100,25 @@ function isBuiltInOrAvailableExtension(extension: string): boolean {
         return true;
     } catch {
         // Package not installed or command failed
+        return false;
+    }
+}
+
+/**
+ * Checks if a PHP extension package is installed on Linux
+ */
+function isExtensionPackageInstalled(extension: string): boolean {
+    try {
+        const { execSync } = require('child_process');
+
+        // Check if the extension package is installed
+        execSync(`dpkg -l | grep -q "^ii.*php-${extension}"`, {
+            stdio: 'ignore',
+            timeout: 3000
+        });
+        return true;
+    } catch {
+        // Package not installed
         return false;
     }
 }
@@ -123,6 +143,72 @@ function getLoadedModules(phpExecutable: string): string[] {
             .filter((line: string) => line && !line.startsWith('['));
     } catch {
         return [];
+    }
+}
+
+/**
+ * Special extensions that require zend_extension instead of extension
+ */
+const ZEND_EXTENSIONS = ['opcache', 'xdebug'];
+
+/**
+ * Removes problematic extension lines from php.ini content
+ */
+function removeProblematicExtensions(content: string, phpExecutable: string): string {
+    if (!phpExecutable) return content;
+
+    try {
+        const { execSync } = require('child_process');
+
+        // Get PHP startup errors to identify problematic extensions
+        const result = execSync(`${phpExecutable} -v 2>&1`, {
+            encoding: 'utf8',
+            timeout: 5000
+        });
+
+        // Find extensions that can't be loaded
+        const problematicExtensions: string[] = [];
+        const duplicateExtensions: string[] = [];
+        const lines = result.split('\n');
+
+        for (const line of lines) {
+            if (line.includes('Unable to load dynamic library')) {
+                const match = line.match(/'([^']+)'/);
+                if (match) {
+                    problematicExtensions.push(match[1]);
+                }
+            } else if (line.includes('Module') && line.includes('is already loaded')) {
+                const match = line.match(/Module "([^"]+)" is already loaded/);
+                if (match) {
+                    duplicateExtensions.push(match[1]);
+                }
+            }
+        }
+
+        console.log(`${colors.yellow}🔧 Found ${problematicExtensions.length} problematic extensions: ${problematicExtensions.join(', ')}${colors.reset}`);
+        console.log(`${colors.yellow}🔧 Found ${duplicateExtensions.length} duplicate extensions: ${duplicateExtensions.join(', ')}${colors.reset}`);
+
+        // Remove problematic extension lines
+        const allProblematic = [...problematicExtensions, ...duplicateExtensions];
+        for (const ext of allProblematic) {
+            const patterns = [
+                new RegExp(`^\\s*extension\\s*=\\s*${ext}\\s*$`, 'gm'),
+                new RegExp(`^\\s*zend_extension\\s*=\\s*${ext}\\s*$`, 'gm')
+            ];
+
+            for (const pattern of patterns) {
+                content = content.replace(pattern, `;extension=${ext} ; Disabled by PHP INI Automation - ${problematicExtensions.includes(ext) ? 'package not installed' : 'built-in module'}`);
+            }
+        }
+
+        if (allProblematic.length > 0) {
+            console.log(`${colors.green}✅ Disabled ${allProblematic.length} problematic extensions${colors.reset}`);
+        }
+
+        return content;
+    } catch (error) {
+        console.log(`${colors.yellow}⚠️  Could not detect problematic extensions: ${error}${colors.reset}`);
+        return content;
     }
 }
 
@@ -156,23 +242,48 @@ function enableExtensions(content: string, extensions: string[], extensionDir: s
             alreadyLoaded.push(extension);
             return;
         }
-        // Check if extension is already enabled
+        // Check if extension is already enabled (check both extension= and zend_extension=)
         const enabledPattern = new RegExp(`^extension\\s*=\\s*${extension}`, 'm');
-        if (enabledPattern.test(content)) {
+        const zendEnabledPattern = new RegExp(`^zend_extension\\s*=\\s*${extension}`, 'm');
+        if (enabledPattern.test(content) || zendEnabledPattern.test(content)) {
             alreadyEnabled.push(extension);
             return;
         }
 
-        // Try to enable commented extension
+        // Try to enable commented extension (check both extension= and zend_extension=)
+        const isZendExtension = ['opcache', 'xdebug'].includes(extension);
         const commentedPattern = new RegExp(`;\\s*extension\\s*=\\s*${extension}`, 'g');
+        const commentedZendPattern = new RegExp(`;\\s*zend_extension\\s*=\\s*${extension}`, 'g');
+
         if (commentedPattern.test(content)) {
-            content = content.replace(commentedPattern, `extension=${extension}`);
+            const replacement = isZendExtension ? `zend_extension=${extension}` : `extension=${extension}`;
+            content = content.replace(commentedPattern, replacement);
             enabled.push(extension);
             return;
         }
 
-        // Check if extension file exists before adding
-        if (extensionExists(extensionDir, extension)) {
+        if (commentedZendPattern.test(content)) {
+            content = content.replace(commentedZendPattern, `zend_extension=${extension}`);
+            enabled.push(extension);
+            return;
+        }
+
+        // For Linux, check if extension package is actually installed
+        // For Windows, check if extension file exists
+        let canEnable = false;
+
+        if (process.platform !== 'win32') {
+            // On Linux, only enable if package is installed
+            canEnable = isExtensionPackageInstalled(extension);
+            if (!canEnable) {
+                console.log(`${colors.yellow}⚠️  Skipping ${extension}: package php-${extension} not installed${colors.reset}`);
+            }
+        } else {
+            // On Windows, check if extension file exists
+            canEnable = extensionExists(extensionDir, extension);
+        }
+
+        if (canEnable) {
             // Add extension at the end of the extensions section
             const extensionSection = content.indexOf('[PHP]') !== -1 ? '[PHP]' :
                                    content.indexOf('; Dynamic Extensions') !== -1 ? '; Dynamic Extensions' :
@@ -186,11 +297,18 @@ function enableExtensions(content: string, extensions: string[], extensionDir: s
                 const beforeInsert = content.substring(0, insertIndex);
                 const afterInsert = content.substring(insertIndex);
 
-                content = beforeInsert + `\nextension=${extension}` + afterInsert;
+                // Use zend_extension for special extensions
+                const isZendExtension = ['opcache', 'xdebug'].includes(extension);
+                const extensionLine = isZendExtension ? `zend_extension=${extension}` : `extension=${extension}`;
+
+                content = beforeInsert + `\n${extensionLine}` + afterInsert;
                 enabled.push(extension);
             } else {
                 // Add to end of file
-                content += `\nextension=${extension}`;
+                const isZendExtension = ['opcache', 'xdebug'].includes(extension);
+                const extensionLine = isZendExtension ? `zend_extension=${extension}` : `extension=${extension}`;
+
+                content += `\n${extensionLine}`;
                 enabled.push(extension);
             }
         } else {
@@ -260,7 +378,9 @@ async function createBackup(filePath: string, useSudo: boolean = false): Promise
         if (useSudo && process.platform !== 'win32') {
             // Use sudo for backup on Unix systems
             const { execSync } = require('child_process');
-            execSync(`sudo cp "${filePath}" "${backupPath}"`, { stdio: 'inherit' });
+            execSync(`sudo cp "${filePath}" "${backupPath}"`, {
+                stdio: ['pipe', 'pipe', 'ignore'] // Suppress output
+            });
             console.log(`${colors.cyan}📋 Backup created with sudo: ${backupPath}${colors.reset}`);
         } else {
             await fs.copy(filePath, backupPath);
@@ -268,8 +388,23 @@ async function createBackup(filePath: string, useSudo: boolean = false): Promise
         }
         return backupPath;
     } catch (error: any) {
-        console.log(`${colors.yellow}⚠️  Could not create backup: ${error.message}${colors.reset}`);
-        return '';
+        if (useSudo && process.platform !== 'win32') {
+            // Try with sudo if regular backup failed
+            try {
+                const { execSync } = require('child_process');
+                execSync(`sudo cp "${filePath}" "${backupPath}"`, {
+                    stdio: ['pipe', 'pipe', 'ignore']
+                });
+                console.log(`${colors.cyan}📋 Backup created with sudo: ${backupPath}${colors.reset}`);
+                return backupPath;
+            } catch {
+                console.log(`${colors.yellow}⚠️  Could not create backup (continuing without backup)${colors.reset}`);
+                return '';
+            }
+        } else {
+            console.log(`${colors.yellow}⚠️  Could not create backup: ${error.message}${colors.reset}`);
+            return '';
+        }
     }
 }
 
@@ -334,85 +469,177 @@ export async function customizePhpIni(
     useSudo: boolean = false,
     phpExecutable: string = ''
 ): Promise<void> {
-    console.log(`${colors.bright}🔧 Customizing php.ini...${colors.reset}`);
+    console.log(`${colors.bright}🔧 Customizing php.ini for Laravel development...${colors.reset}`);
 
-    // Essential Laravel extensions
+    // Essential Laravel extensions (Laravel 10+ requirements)
     const ESSENTIAL_EXTENSIONS: string[] = [
-        'curl',
-        'pdo_sqlite',
-        'sqlite3',
-        'openssl',
-        'pdo_mysql',
-        'mbstring',
-        'tokenizer',
-        'json',
-        'fileinfo',
-        'ctype',
-        'xml',
-        'bcmath',
-        'gd',
-        'zip'
+        // Core Laravel requirements
+        'curl',           // HTTP client, API calls
+        'mbstring',       // String manipulation
+        'openssl',        // Encryption, HTTPS
+        'tokenizer',      // PHP tokenization
+        'xml',            // XML processing
+        'ctype',          // Character type checking
+        'json',           // JSON handling
+        'fileinfo',       // File type detection
+
+        // Database support
+        'pdo_mysql',      // MySQL PDO driver
+        'pdo_sqlite',     // SQLite PDO driver
+        'pdo_pgsql',      // PostgreSQL PDO driver
+        'mysqli',         // MySQL improved extension
+        'sqlite3',        // SQLite3 support
+
+        // Laravel features
+        'bcmath',         // Arbitrary precision mathematics
+        'gd',             // Image manipulation
+        'zip',            // Archive handling
+        'intl',           // Internationalization
+        'soap',           // SOAP protocol support
+        'xsl',            // XSL transformations
+        'ldap',           // LDAP directory access
+        'exif',           // Image metadata
+
+        // Performance & caching
+        'opcache',        // PHP opcode caching
+        'apcu'            // User cache
     ];
 
-    // Additional useful extensions
+    // Advanced Laravel extensions (optional but recommended)
     const OPTIONAL_EXTENSIONS: string[] = [
-        'redis',
-        'imagick',
-        'intl',
-        'soap',
-        'xsl',
-        'exif',
-        'mysqli',
-        'pdo_pgsql',
-        'ldap'
+        // Caching & performance
+        'redis',          // Redis cache driver
+        'memcached',      // Memcached support
+
+        // Image processing
+        'imagick',        // Advanced image manipulation
+        'gmagick',        // GraphicsMagick support
+
+        // Development & debugging
+        'xdebug',         // Debugging and profiling
+        'pcov',           // Code coverage
+
+        // Additional features
+        'imap',           // Email processing
+        'ftp',            // FTP support
+        'ssh2',           // SSH2 protocol
+        'mongodb',        // MongoDB driver
+        'amqp',           // RabbitMQ support
+        'swoole',         // High-performance async framework
+        'yaml'            // YAML parsing
     ];
 
-    // Optimized settings for Laravel development
+    // Laravel-optimized settings for maximum performance and compatibility
     const DEFAULT_SETTINGS: Record<string, string | number> = {
-        // Performance settings
-        max_execution_time: 120,
-        memory_limit: '512M',
-        max_input_vars: 3000,
+        // === PERFORMANCE SETTINGS ===
+        max_execution_time: 300,           // Extended for Artisan commands
+        memory_limit: '1G',                // Generous for Composer, migrations
+        max_input_vars: 5000,              // Large forms, complex data
+        max_input_time: 300,               // File uploads, data processing
 
-        // Output settings
-        output_buffering: 'Off',
-        zlib_output_compression: 'Off',
+        // === FILE UPLOAD SETTINGS ===
+        post_max_size: '256M',             // Large file uploads
+        upload_max_filesize: '256M',       // Individual file size
+        max_file_uploads: 100,             // Multiple file uploads
+        file_uploads: 'On',                // Enable file uploads
 
-        // Upload settings
-        post_max_size: '100M',
-        upload_max_filesize: '100M',
-        max_file_uploads: 20,
+        // === OUTPUT & COMPRESSION ===
+        output_buffering: 8192,            // Optimized buffer size
+        zlib_output_compression: 'On',     // Compress output
+        zlib_output_compression_level: 6,  // Balanced compression
 
-        // Error reporting (development-friendly)
-        error_reporting: 'E_ALL',
-        display_errors: 'On',
-        display_startup_errors: 'On',
-        log_errors: 'On',
+        // === ERROR HANDLING (Development) ===
+        error_reporting: 'E_ALL & ~E_DEPRECATED & ~E_STRICT',
+        display_errors: 'On',              // Show errors in development
+        display_startup_errors: 'On',      // Show startup errors
+        log_errors: 'On',                  // Log errors
+        log_errors_max_len: 8192,          // Error log length
+        ignore_repeated_errors: 'On',      // Avoid spam
 
-        // Session settings
-        'session.gc_maxlifetime': 1440,
-        'session.cookie_lifetime': 0,
+        // === SESSION SETTINGS ===
+        'session.gc_maxlifetime': 14400,   // 4 hours session lifetime
+        'session.cookie_lifetime': 0,      // Session cookies
+        'session.cookie_httponly': 'On',   // Security
+        'session.use_strict_mode': 'On',   // Security
+        'session.cookie_samesite': 'Lax',  // CSRF protection
 
-        // OPcache settings (if available)
-        'opcache.enable': 1,
-        'opcache.memory_consumption': 128,
-        'opcache.max_accelerated_files': 4000,
-        'opcache.revalidate_freq': 2,
+        // === OPCACHE OPTIMIZATION ===
+        'opcache.enable': 1,                    // Enable OPcache
+        'opcache.enable_cli': 1,                // Enable for CLI (Artisan)
+        'opcache.memory_consumption': 512,      // 512MB for OPcache
+        'opcache.interned_strings_buffer': 64,  // String optimization
+        'opcache.max_accelerated_files': 32531, // Max cached files
+        'opcache.revalidate_freq': 0,           // Always check in dev
+        'opcache.validate_timestamps': 1,       // Check file changes
+        'opcache.save_comments': 1,             // Keep docblocks
+        'opcache.fast_shutdown': 1,             // Faster shutdown
 
-        // Realpath cache
-        realpath_cache_size: '4096K',
-        realpath_cache_ttl: 600
+        // === REALPATH CACHE ===
+        realpath_cache_size: '8M',         // Path resolution cache
+        realpath_cache_ttl: 7200,          // 2 hours TTL
+
+        // === SECURITY SETTINGS ===
+        expose_php: 'Off',                 // Hide PHP version
+        allow_url_fopen: 'On',             // Laravel needs this
+        allow_url_include: 'Off',          // Security
+
+        // === DATE/TIME ===
+        'date.timezone': 'UTC',            // Default timezone
+
+        // === MBSTRING SETTINGS ===
+        'mbstring.language': 'English',
+        'mbstring.internal_encoding': 'UTF-8',
+        'mbstring.http_output': 'UTF-8'
     };
 
     // Merge default and custom settings
     const mergedSettings = { ...DEFAULT_SETTINGS, ...customSettings };
 
     try {
-        // Create backup with sudo support
-        await createBackup(filePath, useSudo);
+        // Create backup with sudo support (try sudo first on Linux)
+        if (useSudo && process.platform !== 'win32') {
+            await createBackup(filePath, true);
+        } else {
+            await createBackup(filePath, useSudo);
+        }
 
         let content = await readFileWithSudo(filePath, useSudo);
         console.log(`${colors.green}✅ php.ini file loaded (${content.length} bytes)${colors.reset}`);
+
+        // Clean up problematic extensions first
+        console.log(`${colors.cyan}🧹 Cleaning up problematic extensions...${colors.reset}`);
+        const originalContent = content;
+        content = removeProblematicExtensions(content, phpExecutable);
+
+        // Remove duplicate built-in extensions
+        const builtInExtensions = ['ctype', 'fileinfo', 'tokenizer', 'exif'];
+        for (const ext of builtInExtensions) {
+            const patterns = [
+                new RegExp(`^\\s*extension\\s*=\\s*${ext}\\s*$`, 'gm'),
+                new RegExp(`^\\s*zend_extension\\s*=\\s*${ext}\\s*$`, 'gm')
+            ];
+
+            for (const pattern of patterns) {
+                content = content.replace(pattern, `;extension=${ext} ; Disabled - built-in module`);
+            }
+        }
+
+        // Fix OPcache and XDebug to use zend_extension instead of extension
+        const zendExtensions = ['opcache', 'xdebug'];
+        for (const ext of zendExtensions) {
+            const wrongPattern = new RegExp(`^\\s*extension\\s*=\\s*${ext}\\s*$`, 'gm');
+            if (wrongPattern.test(content)) {
+                content = content.replace(wrongPattern, `zend_extension=${ext}`);
+                console.log(`${colors.green}🔧 Fixed ${ext}: converted extension= to zend_extension=${colors.reset}`);
+            }
+        }
+
+        // If content changed, save it immediately to fix the issues
+        if (content !== originalContent) {
+            console.log(`${colors.yellow}💾 Saving cleanup changes with sudo...${colors.reset}`);
+            await writeFileWithSudo(filePath, content, true);
+            console.log(`${colors.green}✅ Cleanup changes saved successfully${colors.reset}`);
+        }
 
         // Update extension_dir if provided
         if (extensionsDir && fs.existsSync(extensionsDir)) {
@@ -462,6 +689,7 @@ export async function customizePhpIni(
         if (essentialMissing.length > 0) {
             console.log(`${colors.yellow}⚠️  Missing Laravel extensions: ${essentialMissing.join(', ')}${colors.reset}`);
             console.log(`${colors.yellow}   💡 Install with: sudo apt install ${essentialMissing.map(ext => `php-${ext}`).join(' ')}${colors.reset}`);
+            console.log(`${colors.yellow}   🔄 Run 'pia' again after installation to verify${colors.reset}`);
         }
 
         if (optionalMissing.length > 0) {

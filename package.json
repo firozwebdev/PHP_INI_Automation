@@ -1,7 +1,7 @@
 {
   "name": "php-ini-automation",
-  "description": "Automated PHP ini configuration tool for Laravel and other PHP projects across multiple environments (Laragon, XAMPP, WAMP, PVM)",
-  "version": "4.1.0",
+  "description": "Ultimate Laravel-optimized PHP configuration tool that automatically detects and configures PHP installations across all environments with Laravel 10+ specific extensions, performance settings, and security configurations",
+  "version": "5.0.6",
   "type": "commonjs",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -29,15 +29,22 @@
   },
   "keywords": [
     "php",
-    "ini",
-    "configuration",
     "laravel",
+    "laravel-10",
+    "php-configuration",
+    "php-ini",
+    "php-extensions",
+    "laravel-optimization",
+    "php-performance",
     "automation",
     "xampp",
-    "laragon",
     "wamp",
+    "laragon",
     "pvm",
-    "php-extensions"
+    "opcache",
+    "composer",
+    "artisan",
+    "cli"
   ],
   "author": "Your Name <your.email@example.com>",
   "license": "MIT",
@@ -53,10 +60,10 @@
     "node": ">=16.0.0"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
     "@types/fs-extra": "^11.0.0",
-    "typescript": "^5.0.0",
-    "rimraf": "^5.0.0"
+    "@types/node": "^20.0.0",
+    "rimraf": "^5.0.0",
+    "typescript": "^5.0.0"
   },
   "dependencies": {
     "fs-extra": "^11.2.0"

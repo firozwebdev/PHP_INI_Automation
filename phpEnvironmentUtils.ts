@@ -776,8 +776,12 @@ export function scanPhpInstallations(): PhpInstallation[] {
     const isLinux = process.platform === 'linux';
 
     for (const config of ENVIRONMENT_CONFIGS) {
-        // Skip some configs on Linux to avoid duplicates
-        if (isLinux && (config.name.includes('CentOS') || config.name.includes('X11'))) {
+        // Skip problematic configs on Linux to avoid duplicates
+        if (isLinux && (
+            config.name.includes('CentOS') ||
+            config.name.includes('X11') ||
+            config.name.includes('Ubuntu/Debian APT')
+        )) {
             continue;
         }
 

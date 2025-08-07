@@ -25,7 +25,7 @@ function displayHeader(): void {
     console.log(`${colors.cyan}${colors.bright}`);
     console.log('╔══════════════════════════════════════════════════════════════╗');
     console.log('║                    PHP INI AUTOMATION                       ║');
-    console.log('║              Professional PHP Configuration Tool             ║');
+    console.log('║            Laravel-Optimized PHP Configuration Tool         ║');
     console.log('╚══════════════════════════════════════════════════════════════╝');
     console.log(`${colors.reset}\n`);
 }
@@ -202,12 +202,35 @@ async function updatePhpIni(version: string = '', interactive: boolean = true): 
         validateSourceFile(selectedInstallation.iniPath, validation.needsSudo);
         await customizePhpIni(selectedInstallation.iniPath, selectedInstallation.extensionDir, {}, validation.needsSudo, selectedInstallation.phpExecutable);
 
-        console.log(`\n${colors.green}${colors.bright}🎉 SUCCESS! PHP configuration updated successfully!${colors.reset}`);
-        console.log(`${colors.bright}📋 Summary:${colors.reset}`);
+        console.log(`\n${colors.green}${colors.bright}🎉 SUCCESS! PHP optimized for Laravel development!${colors.reset}`);
+        console.log(`${colors.bright}📋 Laravel-Ready Summary:${colors.reset}`);
         console.log(`   • Environment: ${selectedInstallation.environment}`);
-        console.log(`   • PHP Version: ${selectedInstallation.version}`);
-        console.log(`   • Extensions enabled for Laravel development`);
-        console.log(`   • Performance settings optimized\n`);
+        console.log(`   • PHP Version: ${selectedInstallation.version} ${colors.green}✓${colors.reset}`);
+        console.log(`   • Laravel extensions: ${colors.green}Enabled${colors.reset}`);
+        console.log(`   • Performance settings: ${colors.green}Optimized${colors.reset}`);
+        console.log(`   • Security settings: ${colors.green}Configured${colors.reset}`);
+        console.log(`   • OPcache: ${colors.green}Enabled${colors.reset}`);
+
+        // Laravel-specific recommendations
+        console.log(`\n${colors.bright}🚀 Laravel Development Ready!${colors.reset}`);
+        console.log(`${colors.cyan}   Create new Laravel project: ${colors.green}composer create-project laravel/laravel my-app${colors.reset}`);
+        console.log(`${colors.cyan}   Start development server: ${colors.green}php artisan serve${colors.reset}`);
+        console.log(`${colors.cyan}   Run migrations: ${colors.green}php artisan migrate${colors.reset}`);
+
+        // Platform-specific setup
+        if (process.platform === 'linux') {
+            console.log(`\n${colors.bright}🐧 Ubuntu Complete Setup:${colors.reset}`);
+            console.log(`${colors.cyan}   Install ALL Laravel extensions:${colors.reset}`);
+            console.log(`${colors.green}   sudo apt update && sudo apt install -y php-mysql php-curl php-gd php-mbstring php-xml php-zip php-bcmath php-intl php-soap php-xsl php-ldap php-sqlite3 php-opcache php-apcu${colors.reset}`);
+            console.log(`${colors.cyan}   Install Composer: ${colors.green}curl -sS https://getcomposer.org/installer | php && sudo mv composer.phar /usr/local/bin/composer${colors.reset}`);
+            console.log(`${colors.cyan}   Verify setup: ${colors.green}pia && php -v${colors.reset} (should be clean)`);
+        } else if (process.platform === 'win32') {
+            console.log(`\n${colors.bright}🪟 Windows Additional Setup:${colors.reset}`);
+            console.log(`${colors.cyan}   Install Composer: ${colors.green}https://getcomposer.org/Composer-Setup.exe${colors.reset}`);
+            console.log(`${colors.cyan}   Install Node.js: ${colors.green}https://nodejs.org/${colors.reset}`);
+        }
+
+        console.log('');
 
     } catch (error: any) {
         console.log(`\n${colors.red}${colors.bright}❌ Error: ${error.message}${colors.reset}\n`);
@@ -227,7 +250,7 @@ async function updatePhpIni(version: string = '', interactive: boolean = true): 
  * Displays version information
  */
 function displayVersion(): void {
-    const version = '4.1.0'; // Current version
+    const version = '5.0.6'; // Current version
     console.log(`${colors.bright}PHP INI Automation${colors.reset} v${colors.green}${version}${colors.reset}`);
     console.log(`${colors.cyan}Cross-platform PHP configuration tool${colors.reset}\n`);
 

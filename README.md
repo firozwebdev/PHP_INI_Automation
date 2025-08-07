@@ -1,15 +1,17 @@
-# PHP INI Automation v4.0 🚀
+# PHP INI Automation v4.1 🚀
 
-**The Ultimate Cross-Platform PHP Configuration Tool - Intelligent, Powerful, Unbeatable**
+**The Ultimate Laravel-Optimized PHP Configuration Tool - Intelligent, Powerful, Laravel-Ready**
 
 [![npm version](https://badge.fury.io/js/php-ini-automation.svg)](https://badge.fury.io/js/php-ini-automation)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Downloads](https://img.shields.io/npm/dm/php-ini-automation.svg)](https://npmjs.org/package/php-ini-automation)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue.svg)](https://npmjs.org/package/php-ini-automation)
+[![Laravel](https://img.shields.io/badge/Laravel-10%2B%20Ready-red.svg)](https://laravel.com)
 
-> **Revolutionary cross-platform PHP detection and configuration tool that automatically finds and configures ALL your PHP installations across ANY environment and ANY operating system. From Windows (Laragon, XAMPP, WAMP) to Linux (APT, YUM, Homebrew) - we detect them all!**
+> **Revolutionary cross-platform PHP detection and configuration tool specifically optimized for Laravel development. Automatically finds and configures ALL your PHP installations with Laravel-specific extensions, performance settings, and security configurations across ANY environment and ANY operating system!**
 
 🎯 **Quick Start**: `npm install -g php-ini-automation && pia`
+🚀 **Laravel Ready**: Optimized for Laravel 10+ with all required extensions and performance settings
 
 ## 🌟 Revolutionary Features
 
@@ -30,6 +32,33 @@
 - **⚙️ Laravel-Optimized Settings**: Performance, security, and development settings
 - **💾 Automatic Backup**: Timestamped backups before any changes
 - **🔧 Custom Settings Support**: Add your own PHP configurations
+
+## 🎯 Laravel-Specific Optimizations
+
+### 📦 **Essential Extensions (Auto-Enabled)**
+- **Core Requirements**: curl, mbstring, openssl, tokenizer, xml, ctype, json, fileinfo
+- **Database Support**: pdo_mysql, pdo_sqlite, pdo_pgsql, mysqli, sqlite3
+- **Laravel Features**: bcmath, gd, zip, intl, soap, xsl, ldap, exif
+- **Performance**: opcache, apcu
+
+### ⚙️ **Performance Settings**
+- **Memory**: 1GB limit for Composer and migrations
+- **Execution Time**: 300 seconds for Artisan commands
+- **File Uploads**: 256MB support for large files
+- **OPcache**: Optimized for Laravel with 512MB cache
+- **Realpath Cache**: 8MB cache for faster file resolution
+
+### 🔒 **Security Configurations**
+- **Session Security**: HTTPOnly, SameSite, Strict Mode
+- **PHP Exposure**: Hidden version information
+- **Error Handling**: Development-friendly error reporting
+- **File Access**: Secure file upload and include settings
+
+### 🎯 **Laravel-Ready Features**
+- **Timezone**: UTC default for consistent timestamps
+- **Encoding**: UTF-8 for international support
+- **Artisan Support**: CLI optimizations for Artisan commands
+- **Composer Ready**: Memory and time limits for package management
 
 ## 🌍 Cross-Platform Support
 
