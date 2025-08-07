@@ -200,7 +200,7 @@ async function updatePhpIni(version: string = '', interactive: boolean = true): 
         console.log(`${colors.bright}🔧 Customizing php.ini configuration...${colors.reset}`);
 
         validateSourceFile(selectedInstallation.iniPath, validation.needsSudo);
-        await customizePhpIni(selectedInstallation.iniPath, selectedInstallation.extensionDir, {}, validation.needsSudo);
+        await customizePhpIni(selectedInstallation.iniPath, selectedInstallation.extensionDir, {}, validation.needsSudo, selectedInstallation.phpExecutable);
 
         console.log(`\n${colors.green}${colors.bright}🎉 SUCCESS! PHP configuration updated successfully!${colors.reset}`);
         console.log(`${colors.bright}📋 Summary:${colors.reset}`);
@@ -227,7 +227,7 @@ async function updatePhpIni(version: string = '', interactive: boolean = true): 
  * Displays version information
  */
 function displayVersion(): void {
-    const version = '4.0.6'; // Current version
+    const version = '4.1.0'; // Current version
     console.log(`${colors.bright}PHP INI Automation${colors.reset} v${colors.green}${version}${colors.reset}`);
     console.log(`${colors.cyan}Cross-platform PHP configuration tool${colors.reset}\n`);
 

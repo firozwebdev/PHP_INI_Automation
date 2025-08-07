@@ -57,9 +57,73 @@ function extensionExists(extensionDir: string, extension: string): boolean {
         `lib${extension}.so`
     ];
 
-    return possibleExtensions.some(ext =>
+    // Check in the specified extension directory
+    const existsInDir = possibleExtensions.some(ext =>
         fs.existsSync(path.join(extensionDir, ext))
     );
+
+    if (existsInDir) return true;
+
+    // On Linux, also check if it's a built-in module or available via package manager
+    if (!isWindows) {
+        return isBuiltInOrAvailableExtension(extension);
+    }
+
+    return false;
+}
+
+/**
+ * Checks if an extension is built-in or available via package manager on Linux
+ */
+function isBuiltInOrAvailableExtension(extension: string): boolean {
+    const builtInExtensions = [
+        'ctype', 'fileinfo', 'tokenizer', 'json', 'pcre', 'spl', 'standard',
+        'date', 'hash', 'filter', 'reflection', 'session', 'xml'
+    ];
+
+    // Check if it's a built-in extension
+    if (builtInExtensions.includes(extension)) {
+        return true;
+    }
+
+    // Check if extension package is installed via apt
+    try {
+        const { execSync } = require('child_process');
+        const packageName = `php-${extension}`;
+
+        // Check if package is installed
+        execSync(`dpkg -l | grep -q "^ii.*${packageName}"`, {
+            stdio: 'ignore',
+            timeout: 3000
+        });
+        return true;
+    } catch {
+        // Package not installed or command failed
+        return false;
+    }
+}
+
+/**
+ * Gets list of already loaded PHP modules to prevent duplicates
+ */
+function getLoadedModules(phpExecutable: string): string[] {
+    try {
+        const { execSync } = require('child_process');
+        const isWindows = process.platform === 'win32';
+        const nullDevice = isWindows ? '2>nul' : '2>/dev/null';
+
+        const result = execSync(`"${phpExecutable}" -m ${nullDevice}`, {
+            encoding: 'utf8',
+            timeout: 5000,
+            stdio: ['pipe', 'pipe', 'ignore']
+        });
+
+        return result.split('\n')
+            .map((line: string) => line.trim().toLowerCase())
+            .filter((line: string) => line && !line.startsWith('['));
+    } catch {
+        return [];
+    }
 }
 
 /**
@@ -68,19 +132,30 @@ function extensionExists(extensionDir: string, extension: string): boolean {
  * @param content - The php.ini file content.
  * @param extensions - List of PHP extensions to enable.
  * @param extensionDir - Directory containing extension files.
+ * @param phpExecutable - Path to PHP executable for checking loaded modules.
  * @returns Object with updated content and statistics.
  */
-function enableExtensions(content: string, extensions: string[], extensionDir: string): {
+function enableExtensions(content: string, extensions: string[], extensionDir: string, phpExecutable: string = ''): {
     content: string;
     enabled: string[];
     missing: string[];
     alreadyEnabled: string[];
+    alreadyLoaded: string[];
 } {
     const enabled: string[] = [];
     const missing: string[] = [];
     const alreadyEnabled: string[] = [];
+    const alreadyLoaded: string[] = [];
+
+    // Get list of already loaded modules to prevent duplicates
+    const loadedModules = phpExecutable ? getLoadedModules(phpExecutable) : [];
 
     extensions.forEach(extension => {
+        // Skip if module is already loaded to prevent duplicates
+        if (loadedModules.includes(extension.toLowerCase())) {
+            alreadyLoaded.push(extension);
+            return;
+        }
         // Check if extension is already enabled
         const enabledPattern = new RegExp(`^extension\\s*=\\s*${extension}`, 'm');
         if (enabledPattern.test(content)) {
@@ -123,7 +198,7 @@ function enableExtensions(content: string, extensions: string[], extensionDir: s
         }
     });
 
-    return { content, enabled, missing, alreadyEnabled };
+    return { content, enabled, missing, alreadyEnabled, alreadyLoaded };
 }
 
 /**
@@ -250,12 +325,14 @@ async function writeFileWithSudo(filePath: string, content: string, useSudo: boo
  * @param extensionsDir - Directory containing PHP extensions.
  * @param customSettings - Key-value pairs of additional php.ini settings to add/update.
  * @param useSudo - Whether to use sudo for file operations (auto-detected on Unix).
+ * @param phpExecutable - Path to PHP executable for checking loaded modules.
  */
 export async function customizePhpIni(
     filePath: string,
     extensionsDir: string,
     customSettings: Record<string, string | number> = {},
-    useSudo: boolean = false
+    useSudo: boolean = false,
+    phpExecutable: string = ''
 ): Promise<void> {
     console.log(`${colors.bright}🔧 Customizing php.ini...${colors.reset}`);
 
@@ -353,17 +430,18 @@ export async function customizePhpIni(
 
         // Enable essential extensions
         console.log(`${colors.bright}📦 Processing extensions...${colors.reset}`);
-        const extensionResult = enableExtensions(content, ESSENTIAL_EXTENSIONS, extensionsDir);
+        const extensionResult = enableExtensions(content, ESSENTIAL_EXTENSIONS, extensionsDir, phpExecutable);
         content = extensionResult.content;
 
         // Try optional extensions
-        const optionalResult = enableExtensions(content, OPTIONAL_EXTENSIONS, extensionsDir);
+        const optionalResult = enableExtensions(content, OPTIONAL_EXTENSIONS, extensionsDir, phpExecutable);
         content = optionalResult.content;
 
         // Report extension results with better categorization
         const totalEnabled = extensionResult.enabled.concat(optionalResult.enabled);
         const totalMissing = extensionResult.missing.concat(optionalResult.missing);
         const totalAlreadyEnabled = extensionResult.alreadyEnabled.concat(optionalResult.alreadyEnabled);
+        const totalAlreadyLoaded = extensionResult.alreadyLoaded.concat(optionalResult.alreadyLoaded);
 
         // Separate essential vs optional missing extensions
         const essentialMissing = extensionResult.missing;
@@ -377,13 +455,18 @@ export async function customizePhpIni(
             console.log(`${colors.cyan}ℹ️  Already enabled: ${totalAlreadyEnabled.join(', ')}${colors.reset}`);
         }
 
+        if (totalAlreadyLoaded.length > 0) {
+            console.log(`${colors.blue}🔄 Already loaded (skipped duplicates): ${totalAlreadyLoaded.join(', ')}${colors.reset}`);
+        }
+
         if (essentialMissing.length > 0) {
             console.log(`${colors.yellow}⚠️  Missing Laravel extensions: ${essentialMissing.join(', ')}${colors.reset}`);
-            console.log(`${colors.yellow}   💡 These are required for Laravel - consider installing them${colors.reset}`);
+            console.log(`${colors.yellow}   💡 Install with: sudo apt install ${essentialMissing.map(ext => `php-${ext}`).join(' ')}${colors.reset}`);
         }
 
         if (optionalMissing.length > 0) {
             console.log(`${colors.cyan}ℹ️  Optional extensions not found: ${optionalMissing.join(', ')}${colors.reset}`);
+            console.log(`${colors.cyan}   💡 Install with: sudo apt install ${optionalMissing.map(ext => `php-${ext}`).join(' ')}${colors.reset}`);
         }
 
         // Add or update custom settings
